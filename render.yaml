@@ -3,7 +3,7 @@ services:
     name: game-recommendation-system
     runtime: node
     plan: free
-    buildCommand: npm install && npm run build
+    buildCommand: npm install --include=dev && npm run build
     startCommand: cd backend && npx prisma db push && cd .. && npm run start
     envVars:
       - key: NODE_ENV
