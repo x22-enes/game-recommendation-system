@@ -295,12 +295,12 @@ const withListPriceMetadata = async (games: any[]) => {
 const findRelatedGames = async (game: any) => {
     const genres = parseJsonArray(game.genres);
     const genreFilter = genres[0]
-        ? Prisma.sql`genres LIKE ${`%"${genres[0]}"%`} AND id <> ${game.id}`
-        : Prisma.sql`id <> ${game.id}`;
+        ? Prisma.sql`"genres" LIKE ${`%"${genres[0]}"%`} AND "id" <> ${game.id}`
+        : Prisma.sql`"id" <> ${game.id}`;
 
     const related = await prisma.$queryRaw<any[]>(Prisma.sql`
         SELECT *
-        FROM Game
+        FROM "Game"
         WHERE ${genreFilter}
         ORDER BY RANDOM()
         LIMIT 10
@@ -372,8 +372,8 @@ app.get('/api/games', async (req, res) => {
     const platformFilter = cleanCatalogFilter(req.query.platform);
     const shouldShuffle = req.query.shuffle === '1';
     const filters = [
-        ...(genreFilter ? [Prisma.sql`genres LIKE ${`%"${genreFilter}"%`}`] : []),
-        ...(platformFilter ? [Prisma.sql`platforms LIKE ${`%"${platformFilter}"%`}`] : []),
+        ...(genreFilter ? [Prisma.sql`"genres" LIKE ${`%"${genreFilter}"%`}`] : []),
+        ...(platformFilter ? [Prisma.sql`"platforms" LIKE ${`%"${platformFilter}"%`}`] : []),
     ];
     let localGames: any[];
 
@@ -381,11 +381,11 @@ app.get('/api/games', async (req, res) => {
         const normalizedSearch = search.toLowerCase();
         const looseSearch = looseSearchKey(search);
         const compactSearch = looseSearch.replace(/\s+/g, '');
-        const looseTitleSql = Prisma.sql`LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(title, '-', ' '), ':', ' '), '.', ' '), '_', ' '), '™', ''), '®', ''))`;
-        const compactTitleSql = Prisma.sql`LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(title, '-', ''), ':', ''), '.', ''), '_', ''), ' ', ''), '™', ''), '®', ''))`;
+        const looseTitleSql = Prisma.sql`LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE("title", '-', ' '), ':', ' '), '.', ' '), '_', ' '), '™', ''), '®', ''))`;
+        const compactTitleSql = Prisma.sql`LOWER(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE("title", '-', ''), ':', ''), '.', ''), '_', ''), ' ', ''), '™', ''), '®', ''))`;
         const searchFilters = [
             Prisma.sql`(
-                LOWER(title) LIKE ${`%${normalizedSearch}%`} OR
+                LOWER("title") LIKE ${`%${normalizedSearch}%`} OR
                 ${looseTitleSql} LIKE ${`%${looseSearch}%`} OR
                 ${compactTitleSql} LIKE ${`%${compactSearch}%`}
             )`,
@@ -394,28 +394,28 @@ app.get('/api/games', async (req, res) => {
         const candidates = await prisma.$queryRaw<any[]>`
             SELECT *,
                 CASE
-                    WHEN LOWER(title) = ${normalizedSearch} THEN 0
+                    WHEN LOWER("title") = ${normalizedSearch} THEN 0
                     WHEN ${looseTitleSql} = ${looseSearch} THEN 0
                     WHEN ${compactTitleSql} = ${compactSearch} THEN 0
-                    WHEN LOWER(title) LIKE ${`${normalizedSearch}:%`} THEN 1
+                    WHEN LOWER("title") LIKE ${`${normalizedSearch}:%`} THEN 1
                     WHEN ${looseTitleSql} LIKE ${`${looseSearch} %`} THEN 1
-                    WHEN LOWER(title) LIKE ${`${normalizedSearch} -%`} THEN 2
-                    WHEN LOWER(title) LIKE ${`${normalizedSearch} %`} THEN 3
+                    WHEN LOWER("title") LIKE ${`${normalizedSearch} -%`} THEN 2
+                    WHEN LOWER("title") LIKE ${`${normalizedSearch} %`} THEN 3
                     WHEN ${compactTitleSql} LIKE ${`${compactSearch}%`} THEN 3
-                    WHEN LOWER(title) LIKE ${`${normalizedSearch}%`} THEN 4
-                    WHEN LOWER(title) LIKE ${`% ${normalizedSearch}:%`} THEN 5
-                    WHEN LOWER(title) LIKE ${`% ${normalizedSearch} -%`} THEN 6
-                    WHEN LOWER(title) LIKE ${`% ${normalizedSearch} %`} THEN 7
+                    WHEN LOWER("title") LIKE ${`${normalizedSearch}%`} THEN 4
+                    WHEN LOWER("title") LIKE ${`% ${normalizedSearch}:%`} THEN 5
+                    WHEN LOWER("title") LIKE ${`% ${normalizedSearch} -%`} THEN 6
+                    WHEN LOWER("title") LIKE ${`% ${normalizedSearch} %`} THEN 7
                     WHEN ${looseTitleSql} LIKE ${`% ${looseSearch} %`} THEN 7
                     ELSE 9
-                END AS searchRank
-            FROM Game
+                END AS "searchRank"
+            FROM "Game"
             WHERE ${Prisma.join(searchFilters, ' AND ')}
             ORDER BY
-                searchRank,
-                CASE WHEN coverUrl LIKE 'http%' THEN 0 ELSE 1 END,
-                LENGTH(title) ASC,
-                title COLLATE NOCASE ASC
+                "searchRank",
+                CASE WHEN "coverUrl" LIKE 'http%' THEN 0 ELSE 1 END,
+                LENGTH("title") ASC,
+                LOWER("title") ASC
             LIMIT 1000
         `;
 
@@ -445,13 +445,13 @@ app.get('/api/games', async (req, res) => {
 
         localGames = await prisma.$queryRaw<any[]>(Prisma.sql`
             SELECT *
-            FROM Game
+            FROM "Game"
             ${whereSql}
             ORDER BY ${shouldShuffle
                 ? Prisma.sql`RANDOM()`
                 : Prisma.sql`
-                    CASE WHEN coverUrl LIKE 'http%' THEN 0 ELSE 1 END,
-                    title COLLATE NOCASE ASC
+                    CASE WHEN "coverUrl" LIKE 'http%' THEN 0 ELSE 1 END,
+                    LOWER("title") ASC
                 `}
             LIMIT 300
         `);
