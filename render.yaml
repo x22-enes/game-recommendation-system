@@ -11,7 +11,7 @@ services:
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET
-        sync: false
+        generateValue: true
       - key: USE_LIVE_APIS
         value: "false"
       - key: VITE_API_URL
