@@ -31,3 +31,21 @@ A full-stack university capstone project for game recommendations.
 3. If frontend and backend are on the same domain, leave `VITE_API_URL` empty so the app calls `/api`.
 4. If the API is on another domain, set `VITE_API_URL=https://api.yourdomain.com/api` before building the frontend.
 5. Point your domain DNS to the hosting provider, enable HTTPS, then run the backend with `npm run start`.
+
+## Render Deployment
+This repository includes `render.yaml` for a one-service deploy:
+
+- The React frontend is built with Vite.
+- The Express backend serves both `/api` and the built frontend.
+- SQLite is stored on a persistent Render disk at `/var/data/dev.db`.
+
+Deploy steps:
+1. Push this repo to GitHub.
+2. In Render, create a new Blueprint from this repository.
+3. Set `JWT_SECRET` to a random value with at least 32 characters.
+4. Deploy the service.
+5. After the first deploy, open a Render shell and run the catalog imports if the production database is empty:
+   - `npm run catalog --prefix backend`
+   - `npm run lizardbyte --prefix backend`
+
+The local `backend/prisma/dev.db` file is intentionally ignored and is not uploaded to GitHub.
