@@ -16,7 +16,7 @@ services:
         value: "false"
       - key: VITE_API_URL
         value: ""
-    disks:
-      - name: game-recommendation-data
-        mountPath: /var/data
-        sizeGB: 2
+    disk:
+      name: game-recommendation-data
+      mountPath: /var/data
+      sizeGB: 2
