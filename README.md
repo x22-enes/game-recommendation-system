@@ -37,14 +37,16 @@ This repository includes `render.yaml` for a one-service deploy:
 
 - The React frontend is built with Vite.
 - The Express backend serves both `/api` and the built frontend.
-- SQLite is stored on a persistent Render disk at `/var/data/dev.db`.
+- PostgreSQL is hosted separately on Neon using `DATABASE_URL`.
 
 Deploy steps:
 1. Push this repo to GitHub.
-2. In Render, create a new Blueprint from this repository.
-3. Set `JWT_SECRET` to a random value with at least 32 characters.
-4. Deploy the service.
-5. After the first deploy, open a Render shell and run the catalog imports if the production database is empty:
+2. Create a free Neon PostgreSQL project.
+3. In Render, create a new Blueprint from this repository.
+4. Set `DATABASE_URL` to the Neon connection string.
+5. Set `JWT_SECRET` to a random value with at least 32 characters.
+6. Deploy the service.
+7. After the first deploy, open a Render shell and run the catalog imports if the production database is empty:
    - `npm run catalog --prefix backend`
    - `npm run lizardbyte --prefix backend`
 

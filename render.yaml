@@ -2,21 +2,17 @@ services:
   - type: web
     name: game-recommendation-system
     runtime: node
-    plan: starter
+    plan: free
     buildCommand: npm install && npm run build
     startCommand: cd backend && npx prisma db push && cd .. && npm run start
     envVars:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        value: file:/var/data/dev.db
+        sync: false
       - key: JWT_SECRET
         sync: false
       - key: USE_LIVE_APIS
         value: "false"
       - key: VITE_API_URL
         value: ""
-    disk:
-      name: game-recommendation-data
-      mountPath: /var/data
-      sizeGB: 2
