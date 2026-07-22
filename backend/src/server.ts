@@ -160,6 +160,118 @@ const topGamesLimit = (value: unknown) => {
     return [25, 50, 100].includes(requested) ? requested : 25;
 };
 
+const WORLD_TOP_GAMES = [
+    { title: 'The Legend of Zelda: Ocarina of Time', score: 99, note: 'Metacritic all-time rank' },
+    { title: 'SoulCalibur', score: 98, note: 'Metacritic all-time rank' },
+    { title: 'Super Mario Galaxy 2', score: 98, note: 'Metacritic all-time rank' },
+    { title: 'Grand Theft Auto IV', score: 98, note: 'Metacritic all-time rank' },
+    { title: 'Super Mario Galaxy', score: 97, note: 'Metacritic all-time rank' },
+    { title: 'The Legend of Zelda: Breath of the Wild', score: 97, note: 'Metacritic all-time rank' },
+    { title: 'Perfect Dark', score: 97, note: 'Metacritic all-time rank' },
+    { title: "Tony Hawk's Pro Skater 3", score: 97, note: 'Metacritic all-time rank' },
+    { title: 'Red Dead Redemption 2', score: 97, note: 'Metacritic all-time rank' },
+    { title: 'Grand Theft Auto V', score: 97, note: 'Metacritic all-time rank' },
+    { title: 'Metroid Prime', score: 97, note: 'Metacritic all-time rank' },
+    { title: 'Grand Theft Auto III', score: 97, note: 'Metacritic all-time rank' },
+    { title: 'Super Mario Odyssey', score: 97, note: 'Metacritic all-time rank' },
+    { title: 'Halo: Combat Evolved', score: 97, note: 'Metacritic all-time rank' },
+    { title: 'NFL 2K1', score: 97, note: 'Metacritic all-time rank' },
+    { title: 'Half-Life 2', score: 96, note: 'Metacritic all-time rank' },
+    { title: 'BioShock', score: 96, note: 'Metacritic all-time rank' },
+    { title: 'GoldenEye 007', score: 96, note: 'Metacritic all-time rank' },
+    { title: 'Uncharted 2: Among Thieves', score: 96, note: 'Metacritic all-time rank' },
+    { title: 'Resident Evil 4', score: 96, note: 'Metacritic all-time rank' },
+    { title: "Baldur's Gate 3", score: 96, note: 'Metacritic all-time rank' },
+    { title: 'The Orange Box', score: 96, note: 'Metacritic all-time rank' },
+    { title: 'Tekken 3', score: 96, note: 'Metacritic all-time rank' },
+    { title: 'Mass Effect 2', score: 96, note: 'Metacritic all-time rank' },
+    { title: 'The Elder Scrolls V: Skyrim', score: 96, note: 'Metacritic all-time rank' },
+    { title: 'The Last of Us', score: 95, note: 'Highly acclaimed all-time ranking' },
+    { title: 'Red Dead Redemption', score: 95, note: 'Highly acclaimed all-time ranking' },
+    { title: 'Portal 2', score: 95, note: 'Highly acclaimed all-time ranking' },
+    { title: 'Elden Ring', score: 95, note: 'Highly acclaimed all-time ranking' },
+    { title: 'God of War', score: 94, note: 'Highly acclaimed all-time ranking' },
+];
+
+const TRENDING_GAMES = [
+    { title: 'Counter-Strike 2', score: 1_219_924, note: 'Steam peak today' },
+    { title: 'Palworld', score: 804_856, note: 'Steam peak today' },
+    { title: 'Dota 2', score: 758_395, note: 'Steam peak today' },
+    { title: 'PUBG: BATTLEGROUNDS', score: 753_162, note: 'Steam peak today' },
+    { title: 'TBH: Task Bar Hero', score: 269_645, note: 'Steam peak today' },
+    { title: 'Bongo Cat', score: 174_646, note: 'Steam peak today' },
+    { title: 'FiveM', score: 182_902, note: 'Steam peak today' },
+    { title: 'Marvel Rivals', score: 117_912, note: 'Steam peak today' },
+    { title: 'EA SPORTS FC 26', score: 130_304, note: 'Steam peak today' },
+    { title: 'The Binding of Isaac: Rebirth', score: 131_073, note: 'Steam peak today' },
+    { title: 'Apex Legends', score: 197_638, note: 'Steam peak today' },
+    { title: 'Slay the Spire 2', score: 101_419, note: 'Steam peak today' },
+    { title: 'Rust', score: 131_964, note: 'Steam peak today' },
+    { title: 'Grand Theft Auto V Enhanced', score: 105_615, note: 'Steam peak today' },
+    { title: 'Delta Force', score: 125_163, note: 'Steam peak today' },
+    { title: 'Stardew Valley', score: 103_768, note: 'Steam peak today' },
+    { title: 'Dead by Daylight', score: 82_806, note: 'Steam peak today' },
+    { title: "Tom Clancy's Rainbow Six Siege", score: 68_666, note: 'Steam peak today' },
+    { title: 'Warframe', score: 71_918, note: 'Steam peak today' },
+    { title: 'Battlefield 6', score: 81_745, note: 'Steam peak today' },
+    { title: 'VRChat', score: 57_312, note: 'Steam peak today' },
+    { title: 'Overwatch 2', score: 55_273, note: 'Steam peak today' },
+    { title: 'Destiny 2', score: 54_302, note: 'Steam peak today' },
+];
+
+const normalizeRankingTitle = (value: string) =>
+    value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+const buildCuratedRanking = async (
+    list: { title: string; score: number; note: string }[],
+    limit: number,
+    source: string
+) => {
+    const requested = list.slice(0, limit);
+    const exactCandidates = await prisma.game.findMany({
+        where: {
+            OR: requested.map(item => ({
+                title: { equals: item.title, mode: 'insensitive' as const },
+            })),
+        },
+        take: Math.max(100, requested.length * 3),
+    });
+    const looseCandidates = await prisma.game.findMany({
+        where: {
+            OR: requested.map(item => ({
+                title: { contains: item.title, mode: 'insensitive' as const },
+            })),
+        },
+        take: Math.max(200, requested.length * 8),
+    });
+    const candidates = [...exactCandidates, ...looseCandidates];
+    const byNormalizedTitle = new Map(candidates.map(game => [normalizeRankingTitle(game.title), game]));
+    const rows = [];
+
+    for (const item of requested) {
+        if (rows.length >= limit) break;
+        const normalizedTitle = normalizeRankingTitle(item.title);
+        const game =
+            byNormalizedTitle.get(normalizedTitle) ||
+            candidates.find(candidate => {
+                const normalizedCandidate = normalizeRankingTitle(candidate.title);
+                return normalizedCandidate.startsWith(`${normalizedTitle} `);
+            }) ||
+            candidates.find(candidate => normalizeRankingTitle(candidate.title).includes(normalizedTitle));
+        if (!game) continue;
+        rows.push({
+            rank: rows.length + 1,
+            score: item.score,
+            source,
+            note: item.note,
+            referenceTitle: item.title,
+            game,
+        });
+    }
+
+    return rows;
+};
+
 const getAvailableGenres = async () => {
     const games = await prisma.game.findMany({
         select: { genres: true },
@@ -494,23 +606,16 @@ app.get('/api/games/:id', async (req, res) => {
 app.get('/api/top-games', async (req, res) => {
     try {
         const limit = topGamesLimit(req.query.limit);
-        const [criticGames, communityTop] = await Promise.all([
-            prisma.game.findMany({
-                where: { criticScore: { not: null } },
-                orderBy: [{ criticScore: 'desc' }, { title: 'asc' }],
-                take: limit,
-            }),
+        const [worldTop, trendingTop, communityTop] = await Promise.all([
+            buildCuratedRanking(WORLD_TOP_GAMES, limit, 'Metacritic all-time'),
+            buildCuratedRanking(TRENDING_GAMES, limit, 'Steam current players'),
             rankCommunityGames(limit),
         ]);
 
         res.json({
             limit,
-            criticTop: criticGames.map((game, index) => ({
-                rank: index + 1,
-                score: game.criticScore,
-                source: game.criticSource || 'Critic score',
-                game,
-            })),
+            worldTop,
+            trendingTop,
             communityTop,
         });
     } catch (error) {

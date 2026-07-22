@@ -27,7 +27,6 @@ export default function Navbar() {
 
                 <div className="nav-strip">
                     <NavLink to="/" end className={navClass}>Browse</NavLink>
-                    <NavLink to="/top-games" className={navClass}>Top Games</NavLink>
 
                     {isLoggedIn && (
                         <span className="mx-1 hidden h-5 w-px bg-white/10 md:block" aria-hidden />

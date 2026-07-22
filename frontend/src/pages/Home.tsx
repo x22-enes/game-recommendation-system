@@ -157,6 +157,22 @@ function GenrePanel({
                     </button>
                 )}
             </div>
+            <div className="mb-3 grid gap-2 border-b border-white/[0.06] pb-3">
+                <Link
+                    to="/top-games"
+                    className="flex items-center gap-3 rounded-lg border border-amber-400/20 bg-amber-400/10 px-3 py-2.5 text-sm font-black text-amber-100 transition-all duration-200 hover:border-amber-300/35 hover:bg-amber-400/15"
+                >
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-amber-300/25 bg-black/25 text-xs">#</span>
+                    <span>Top Games</span>
+                </Link>
+                <Link
+                    to="/top-games?mode=trending"
+                    className="flex items-center gap-3 rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-3 py-2.5 text-sm font-black text-emerald-100 transition-all duration-200 hover:border-emerald-300/35 hover:bg-emerald-400/15"
+                >
+                    <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-300/25 bg-black/25 text-xs">UP</span>
+                    <span>Trending Games</span>
+                </Link>
+            </div>
             <div className="max-h-[28rem] space-y-1 overflow-y-auto pr-1">
                 {options.map(genre => (
                     <button

@@ -130,7 +130,7 @@ export function CoverArt({
       <img
         src={game.coverUrl}
         alt={game.title}
-        className={`object-cover ${className}`}
+        className={`bg-slate-950 object-contain ${className}`}
         loading="lazy"
         onError={() => setFailed(true)}
       />

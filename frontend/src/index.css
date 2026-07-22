@@ -79,7 +79,7 @@
   }
 
   .market-cover {
-    @apply aspect-[16/9] w-full bg-slate-950 object-cover;
+    @apply aspect-[16/9] w-full bg-slate-950 object-contain;
   }
 
   .stat-tile {
@@ -208,7 +208,7 @@
   }
 
   .leaderboard-row {
-    @apply surface grid gap-4 rounded-xl p-4 transition-all duration-300 md:grid-cols-[72px_96px_1fr_auto] md:items-center;
+    @apply surface grid gap-4 rounded-xl p-4 transition-all duration-300 md:grid-cols-[72px_112px_1fr_auto] md:items-center;
     @apply hover:-translate-y-0.5 hover:border-cyan-400/20 hover:shadow-card-hover;
   }
 
