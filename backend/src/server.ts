@@ -277,6 +277,26 @@ const WORLD_TOP_GAMES = [
     { title: 'Slay the Spire', score: 89, note: 'Community classic ranking' },
     { title: 'Balatro', score: 90, note: 'Highly acclaimed all-time ranking' },
     { title: 'Cuphead', score: 88, note: 'Community classic ranking' },
+    { title: 'Firewatch', score: 81, note: 'Popular catalog ranking' },
+    { title: 'What Remains of Edith Finch', score: 88, note: 'Community classic ranking' },
+    { title: 'Outer Wilds', score: 85, note: 'Community classic ranking' },
+    { title: 'Tunic', score: 85, note: 'Community classic ranking' },
+    { title: 'Return of the Obra Dinn', score: 89, note: 'Community classic ranking' },
+    { title: 'Braid', score: 93, note: 'Highly acclaimed all-time ranking' },
+    { title: 'Limbo', score: 90, note: 'Highly acclaimed all-time ranking' },
+    { title: 'Papers, Please', score: 85, note: 'Community classic ranking' },
+    { title: 'Hotline Miami', score: 85, note: 'Community classic ranking' },
+    { title: 'FTL: Faster Than Light', score: 84, note: 'Community classic ranking' },
+    { title: 'Into the Breach', score: 89, note: 'Community classic ranking' },
+    { title: 'The Binding of Isaac: Rebirth', score: 86, note: 'Community classic ranking' },
+    { title: 'Spelunky 2', score: 91, note: 'Highly acclaimed all-time ranking' },
+    { title: 'Rogue Legacy 2', score: 88, note: 'Community classic ranking' },
+    { title: 'Vampire Survivors', score: 86, note: 'Community classic ranking' },
+    { title: 'Dave the Diver', score: 90, note: 'Highly acclaimed all-time ranking' },
+    { title: 'Pizza Tower', score: 89, note: 'Community classic ranking' },
+    { title: 'Hi-Fi RUSH', score: 89, note: 'Community classic ranking' },
+    { title: 'Sea of Stars', score: 87, note: 'Community classic ranking' },
+    { title: 'Lies of P', score: 84, note: 'Community classic ranking' },
 ];
 
 const TRENDING_GAMES = [
@@ -375,6 +395,21 @@ const TRENDING_GAMES = [
     { title: 'BidKing', score: 13_280, note: 'Steam peak today' },
     { title: 'Stellaris', score: 15_188, note: 'Steam peak today' },
     { title: 'The Outlast Trials', score: 17_735, note: 'Steam peak today' },
+    { title: 'Wuthering Waves', score: 18_425, note: 'Steam peak today' },
+    { title: 'Kingdom Come: Deliverance II', score: 21_185, note: 'Steam peak today' },
+    { title: 'Warhammer 40,000: Darktide', score: 15_369, note: 'Steam peak today' },
+    { title: 'Football Manager 2024', score: 19_679, note: 'Steam peak today' },
+    { title: 'Russian Fishing 4', score: 20_570, note: 'Steam peak today' },
+    { title: 'Marathon', score: 14_809, note: 'Steam peak today' },
+    { title: 'The Isle', score: 16_144, note: 'Steam peak today' },
+    { title: 'Once Human', score: 16_652, note: 'Steam peak today' },
+    { title: 'DELTARUNE', score: 13_935, note: 'Steam peak today' },
+    { title: 'Warhammer 40,000: Space Marine 2', score: 16_011, note: 'Steam peak today' },
+    { title: 'Sid Meier\'s Civilization V', score: 16_157, note: 'Steam peak today' },
+    { title: 'Schedule I', score: 13_898, note: 'Steam peak today' },
+    { title: 'Oxygen Not Included', score: 15_617, note: 'Steam peak today' },
+    { title: 'The Witcher 3: Wild Hunt', score: 22_182, note: 'Steam peak today' },
+    { title: 'Fallout 4', score: 14_142, note: 'Steam peak today' },
 ];
 
 const normalizeRankingTitle = (value: string) =>
@@ -385,7 +420,7 @@ const buildCuratedRanking = async (
     limit: number,
     source: string
 ) => {
-    const requested = list.slice(0, limit);
+    const requested = list.slice(0, Math.min(list.length, limit + 40));
     const exactCandidates = await prisma.game.findMany({
         where: {
             OR: requested.map(item => ({
