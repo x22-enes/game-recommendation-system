@@ -423,6 +423,9 @@ const TRENDING_GAMES = [
 const normalizeRankingTitle = (value: string) =>
     value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
+let availableGenresCache: { value: string[]; expiresAt: number } | null = null;
+const AVAILABLE_GENRES_CACHE_MS = 30 * 60 * 1000;
+
 const buildCuratedRanking = async (
     list: { title: string; score: number; note: string }[],
     limit: number,
@@ -474,10 +477,19 @@ const buildCuratedRanking = async (
 };
 
 const getAvailableGenres = async () => {
+    if (availableGenresCache && availableGenresCache.expiresAt > Date.now()) {
+        return availableGenresCache.value;
+    }
+
     const games = await prisma.game.findMany({
         select: { genres: true },
     });
-    return unique(games.flatMap(game => parseJsonArray(game.genres)));
+    const genres = unique(games.flatMap(game => parseJsonArray(game.genres)));
+    availableGenresCache = {
+        value: genres,
+        expiresAt: Date.now() + AVAILABLE_GENRES_CACHE_MS,
+    };
+    return genres;
 };
 
 const rankCommunityGames = async (limit = 25) => {

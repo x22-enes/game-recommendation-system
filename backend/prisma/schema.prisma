@@ -49,6 +49,10 @@ model Game {
   wishlist    WishlistItem[]
   storePrices StorePrice[]
   comments    GameComment[]
+
+  @@index([title])
+  @@index([source])
+  @@index([criticScore])
 }
 
 model UserGame {
@@ -61,6 +65,10 @@ model UserGame {
   game      Game     @relation(fields: [gameId], references: [id])
 
   @@unique([userId, gameId])
+  @@index([userId])
+  @@index([gameId])
+  @@index([status])
+  @@index([rating])
 }
 
 model WishlistItem {
@@ -71,6 +79,8 @@ model WishlistItem {
   game   Game   @relation(fields: [gameId], references: [id])
 
   @@unique([userId, gameId])
+  @@index([userId])
+  @@index([gameId])
 }
 
 model StorePrice {
@@ -81,6 +91,11 @@ model StorePrice {
   url       String
   source    String // e.g., 'cheapshark'
   game      Game   @relation(fields: [gameId], references: [id])
+
+  @@index([gameId])
+  @@index([gameId, price])
+  @@index([source])
+  @@index([storeName])
 }
 
 model GameComment {
