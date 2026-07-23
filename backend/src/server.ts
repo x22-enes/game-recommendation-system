@@ -8,7 +8,7 @@ import fs from 'fs';
 import path from 'path';
 import { findBestCover } from './coverProvider';
 import { findVerifiedPrices } from './priceProvider';
-import { platformsForTitle } from './platformProvider';
+import { hasKnownPlatformRule, platformsForKnownTitle } from './platformProvider';
 import { buildRecommendations } from './recommendationEngine';
 import { inferGenresForTitle } from './genreProvider';
 import { fetchSteamDetails, steamAppIdFromUrl } from './steamProvider';
@@ -49,6 +49,14 @@ const hasUsableCover = (coverUrl?: string | null) =>
 const hasSpecificPlatforms = (platforms?: string | null) => {
     const parsed = parseJsonArray(platforms);
     return parsed.length > 0 && !parsed.includes('Console');
+};
+
+const isDefaultPlatformFallback = (platforms?: string | null) => {
+    const parsed = parseJsonArray(platforms).sort();
+    return parsed.length === 3 &&
+        parsed[0] === 'PC' &&
+        parsed[1] === 'PlayStation' &&
+        parsed[2] === 'Xbox';
 };
 
 const parseJsonArray = (value?: string | null): string[] => {
@@ -531,11 +539,13 @@ const withFreshGameMetadata = async (game: any) => {
 
     const updates: any = {};
     const lizardByteId = lizardByteIdFromSource(game.source);
+    const hasLikelyFallbackPlatforms = isDefaultPlatformFallback(game.platforms) && !hasKnownPlatformRule(game.title);
 
     if (lizardByteId && (
         !hasUsableCover(game.coverUrl) ||
         parseJsonArray(game.genres).length === 0 ||
         !hasSpecificPlatforms(game.platforms) ||
+        hasLikelyFallbackPlatforms ||
         !game.description ||
         !game.criticScore
     )) {
@@ -544,12 +554,18 @@ const withFreshGameMetadata = async (game: any) => {
 
         if (!hasUsableCover(game.coverUrl) && metadata.coverUrl) updates.coverUrl = metadata.coverUrl;
         if (parseJsonArray(game.genres).length === 0 && metadata.genres?.length) updates.genres = JSON.stringify(metadata.genres);
-        if (!hasSpecificPlatforms(game.platforms) && metadata.platforms?.length) updates.platforms = JSON.stringify(metadata.platforms);
+        if ((!hasSpecificPlatforms(game.platforms) || hasLikelyFallbackPlatforms) && metadata.platforms?.length) {
+            updates.platforms = JSON.stringify(metadata.platforms);
+        }
         if (!game.description && metadata.description) updates.description = metadata.description;
         if (!game.criticScore && metadata.criticScore) {
             updates.criticScore = metadata.criticScore;
             updates.criticSource = 'IGDB via LizardByte/GameDB';
         }
+    }
+
+    if (hasLikelyFallbackPlatforms && !updates.platforms) {
+        updates.platforms = JSON.stringify([]);
     }
 
     if (!hasUsableCover(game.coverUrl)) {
@@ -560,8 +576,9 @@ const withFreshGameMetadata = async (game: any) => {
         }
     }
 
-    if (!hasSpecificPlatforms(game.platforms)) {
-        updates.platforms = JSON.stringify(platformsForTitle(game.title));
+    if (!hasSpecificPlatforms(updates.platforms ?? game.platforms)) {
+        const knownPlatforms = platformsForKnownTitle(game.title);
+        if (knownPlatforms) updates.platforms = JSON.stringify(knownPlatforms);
     }
 
     if (parseJsonArray(game.genres).length === 0) {

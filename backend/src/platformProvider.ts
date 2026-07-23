@@ -121,6 +121,15 @@ export function platformsForTitle(title: string): PlatformName[] {
     return [...(rule?.platforms || DEFAULT_PLATFORMS)];
 }
 
+export function platformsForKnownTitle(title: string): PlatformName[] | null {
+    const rule = ruleByTitle.get(normalizeTitle(title));
+    return rule ? [...rule.platforms] : null;
+}
+
+export function hasKnownPlatformRule(title: string) {
+    return ruleByTitle.has(normalizeTitle(title));
+}
+
 export function consoleStoreForTitle(title: string) {
     const rule = ruleByTitle.get(normalizeTitle(title));
     if (!rule?.consoleStore) return null;
