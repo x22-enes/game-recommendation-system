@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../api';
+import { getAuthToken } from '../auth';
 import { CoverArt, Game, gameBlurb, MmmScoreStrip, parseGenres, parsePlatforms, PlatformBadges, PriceBadge } from '../utils/games';
 
 const DEFAULT_GENRE_OPTIONS = [
@@ -20,10 +21,37 @@ const DEFAULT_GENRE_OPTIONS = [
     'Sports',
 ];
 
-const BROWSE_CACHE_VERSION = 'v2';
+const BROWSE_CACHE_VERSION = 'v4';
+const ANONYMOUS_BROWSE_SEED_KEY = 'mmmrecs-anonymous-browse-seed';
 
-const browseCacheKey = (search: string, genre: string, platform: string) =>
-    `browse:${BROWSE_CACHE_VERSION}:${search.trim().toLowerCase() || 'all'}:${genre}:${platform}`;
+function userSeedFromToken() {
+    const token = getAuthToken();
+    if (!token) return '';
+
+    try {
+        const encoded = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        const padded = encoded.padEnd(encoded.length + ((4 - encoded.length % 4) % 4), '=');
+        const payload = JSON.parse(atob(padded));
+        return String(payload.userId || payload.sub || '').replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 80);
+    } catch {
+        return token.slice(-32).replace(/[^a-zA-Z0-9_-]/g, '');
+    }
+}
+
+function getBrowseSeed() {
+    const userSeed = userSeedFromToken();
+    if (userSeed) return `user-${userSeed}`;
+
+    const existing = localStorage.getItem(ANONYMOUS_BROWSE_SEED_KEY);
+    if (existing) return existing;
+
+    const next = `guest-${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}`;
+    localStorage.setItem(ANONYMOUS_BROWSE_SEED_KEY, next);
+    return next;
+}
+
+const browseCacheKey = (search: string, genre: string, platform: string, seed: string) =>
+    `browse:${BROWSE_CACHE_VERSION}:${seed}:${search.trim().toLowerCase() || 'all'}:${genre}:${platform}`;
 
 function CompactSearchResult({ game }: { game: Game }) {
     const platforms = parsePlatforms(game.platforms);
@@ -215,6 +243,7 @@ export default function Home() {
     const [shuffleKey, setShuffleKey] = useState(0);
     const [shuffling, setShuffling] = useState(false);
     const [genreOptions, setGenreOptions] = useState(DEFAULT_GENRE_OPTIONS);
+    const [browseSeed, setBrowseSeed] = useState(getBrowseSeed);
 
     useEffect(() => {
         const nextSearch = searchParams.get('search') || '';
@@ -273,8 +302,9 @@ export default function Home() {
     }, []);
 
     useEffect(() => {
+        setBrowseSeed(getBrowseSeed());
         const fetchGames = async () => {
-            const cacheKey = browseCacheKey(search, genre, platform);
+            const cacheKey = browseCacheKey(search, genre, platform, browseSeed);
             if (shuffleKey === 0) {
                 const cached = sessionStorage.getItem(cacheKey);
                 if (cached) {
@@ -299,6 +329,7 @@ export default function Home() {
                 if (search.trim()) params.set('search', search.trim());
                 if (genre !== 'All') params.set('genre', genre);
                 if (platform !== 'All') params.set('platform', platform);
+                if (!search.trim()) params.set('seed', browseSeed);
                 if (shuffleKey > 0 && !search.trim()) params.set('shuffle', '1');
                 const query = params.toString();
                 const url = query ? `/games?${query}` : '/games';
@@ -314,7 +345,7 @@ export default function Home() {
         };
         const timeoutId = setTimeout(fetchGames, 300);
         return () => clearTimeout(timeoutId);
-    }, [search, genre, platform, shuffleKey]);
+    }, [search, genre, platform, shuffleKey, browseSeed]);
 
     const platforms = useMemo(
         () => ['All', ...Array.from(new Set(games.flatMap(game => parsePlatforms(game.platforms)))).sort()],
@@ -342,7 +373,7 @@ export default function Home() {
             <section className="search-panel mb-6">
                 <div className="grid gap-0 lg:grid-cols-[1.25fr_0.75fr]">
                     <div className="p-5 sm:p-6 lg:p-8">
-                        <p className="eyebrow">Discover</p>
+                        <p className="eyebrow">Built by gamer for gamers</p>
                         <h1 className="mt-1 text-3xl font-black tracking-tight text-white sm:text-4xl md:text-5xl">
                             MMM Recs Catalog
                         </h1>

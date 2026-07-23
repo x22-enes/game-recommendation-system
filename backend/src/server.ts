@@ -146,6 +146,12 @@ const cleanCatalogFilter = (value: unknown) => {
     return text.replace(/[%_"]/g, '').replace(/\s+/g, ' ').slice(0, 40);
 };
 
+const cleanBrowseSeed = (value: unknown) =>
+    String(value || '')
+        .trim()
+        .replace(/[^a-zA-Z0-9_-]/g, '')
+        .slice(0, 80);
+
 const isSafeUsername = (value: string) => /^[a-zA-Z0-9_-]{3,24}$/.test(value);
 
 const signUserToken = (userId: string) => jwt.sign({ userId }, JWT_SECRET, { expiresIn: '7d' });
@@ -762,6 +768,7 @@ app.get('/api/games', async (req, res) => {
     const genreFilter = cleanCatalogFilter(req.query.genre);
     const platformFilter = cleanCatalogFilter(req.query.platform);
     const shouldShuffle = req.query.shuffle === '1';
+    const browseSeed = cleanBrowseSeed(req.query.seed);
     const filters = [
         ...(genreFilter ? [Prisma.sql`"genres" LIKE ${`%"${genreFilter}"%`}`] : []),
         ...(platformFilter ? [Prisma.sql`"platforms" LIKE ${`%"${platformFilter}"%`}`] : []),
@@ -840,7 +847,12 @@ app.get('/api/games', async (req, res) => {
             ${whereSql}
             ORDER BY ${shouldShuffle
                 ? Prisma.sql`RANDOM()`
-                : Prisma.sql`
+                : browseSeed
+                    ? Prisma.sql`
+                    CASE WHEN "coverUrl" LIKE 'http%' THEN 0 ELSE 1 END,
+                    md5("id" || ${browseSeed})
+                `
+                    : Prisma.sql`
                     CASE WHEN "coverUrl" LIKE 'http%' THEN 0 ELSE 1 END,
                     LOWER("title") ASC
                 `}

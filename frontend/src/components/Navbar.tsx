@@ -20,7 +20,7 @@ export default function Navbar() {
                             MMM Recs
                         </span>
                         <span className="block text-[0.68rem] font-medium text-slate-500">
-                            Mini Mid Max recommendations
+                            Built by gamer for gamers
                         </span>
                     </span>
                 </Link>

@@ -64,7 +64,7 @@ export default function Login() {
     return (
         <div className="page-enter mx-auto grid max-w-5xl gap-8 lg:grid-cols-[1fr_24rem] lg:items-center">
             <section className="surface-elevated rounded-xl p-6 sm:p-8">
-                <p className="eyebrow">Welcome</p>
+                <p className="eyebrow">Built by gamer for gamers</p>
                 <h1 className="mt-3 text-4xl font-black tracking-tight text-white md:text-5xl">
                     MMM Recs finds your next game.
                 </h1>
