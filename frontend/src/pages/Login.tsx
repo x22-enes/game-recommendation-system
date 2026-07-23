@@ -127,7 +127,7 @@ export default function Login() {
                     placeholder="Password"
                     autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
                     required
-                    minLength={4}
+                    minLength={mode === 'register' ? 8 : 1}
                 />
 
                 <button className="btn-primary mb-4 w-full" disabled={loading}>

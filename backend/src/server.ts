@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import { Prisma, PrismaClient } from '@prisma/client';
 import jwt from 'jsonwebtoken';
@@ -17,11 +19,37 @@ import { fetchLizardByteGameDetails, lizardByteIdFromSource, lizardByteMetadataF
 dotenv.config();
 const app = express();
 const prisma = new PrismaClient();
+const isProduction = process.env.NODE_ENV === 'production';
 
 const allowedOrigins = (process.env.FRONTEND_URL || '')
     .split(',')
     .map(origin => origin.trim())
     .filter(Boolean);
+
+app.disable('x-powered-by');
+app.set('trust proxy', 1);
+
+app.use(helmet({
+    contentSecurityPolicy: isProduction
+        ? {
+            directives: {
+                defaultSrc: ["'self'"],
+                baseUri: ["'self'"],
+                connectSrc: ["'self'", ...allowedOrigins],
+                fontSrc: ["'self'", 'data:'],
+                formAction: ["'self'"],
+                frameAncestors: ["'none'"],
+                imgSrc: ["'self'", 'data:', 'https:'],
+                objectSrc: ["'none'"],
+                scriptSrc: ["'self'"],
+                styleSrc: ["'self'", "'unsafe-inline'"],
+                upgradeInsecureRequests: [],
+            },
+        }
+        : false,
+    crossOriginEmbedderPolicy: false,
+    referrerPolicy: { policy: 'no-referrer' },
+}));
 
 app.use(cors({
     origin: allowedOrigins.length
@@ -32,12 +60,37 @@ app.use(cors({
             }
             callback(new Error('Not allowed by CORS'));
         }
-        : true,
+        : isProduction ? false : true,
 }));
-app.use(express.json({ limit: '3mb' }));
+app.use(express.json({ limit: '128kb', strict: true }));
+
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 700,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many requests. Please try again later.' },
+});
+
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many login attempts. Please try again later.' },
+});
+
+const writeLimiter = rateLimit({
+    windowMs: 10 * 60 * 1000,
+    limit: 120,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many changes. Please try again later.' },
+});
+
+app.use('/api', apiLimiter);
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret';
-const isProduction = process.env.NODE_ENV === 'production';
 
 if (isProduction && (!process.env.JWT_SECRET || JWT_SECRET === 'secret' || JWT_SECRET.length < 32)) {
     throw new Error('Set JWT_SECRET to a strong value before running in production.');
@@ -93,7 +146,9 @@ const cleanCatalogFilter = (value: unknown) => {
     return text.replace(/[%_"]/g, '').replace(/\s+/g, ' ').slice(0, 40);
 };
 
-const signUserToken = (userId: string) => jwt.sign({ userId }, JWT_SECRET);
+const isSafeUsername = (value: string) => /^[a-zA-Z0-9_-]{3,24}$/.test(value);
+
+const signUserToken = (userId: string) => jwt.sign({ userId }, JWT_SECRET, { expiresIn: '7d' });
 
 const publicAuthUser = (user: any) => ({
     id: user.id,
@@ -651,7 +706,7 @@ const authenticate = (req: any, res: any, next: any) => {
 };
 
 // Auth
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authLimiter, async (req, res) => {
     const username = String(req.body.username || '').trim();
     const password = String(req.body.password || '');
     const user = await prisma.user.findUnique({ where: { username } });
@@ -659,12 +714,14 @@ app.post('/api/auth/login', async (req, res) => {
     res.json({ token: signUserToken(user.id), user: publicAuthUser(user) });
 });
 
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/auth/register', authLimiter, async (req, res) => {
     const username = String(req.body.username || '').trim();
     const password = String(req.body.password || '');
 
-    if (username.length < 3) return res.status(400).json({ error: 'Username must be at least 3 characters.' });
-    if (password.length < 4) return res.status(400).json({ error: 'Password must be at least 4 characters.' });
+    if (!isSafeUsername(username)) {
+        return res.status(400).json({ error: 'Username must be 3-24 characters and use only letters, numbers, _ or -.' });
+    }
+    if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters.' });
 
     try {
         const existing = await prisma.user.findUnique({ where: { username } });
@@ -911,7 +968,7 @@ app.get('/api/games/:id/comments', async (req, res) => {
     }
 });
 
-app.post('/api/games/:id/comments', authenticate, async (req: any, res: any) => {
+app.post('/api/games/:id/comments', writeLimiter, authenticate, async (req: any, res: any) => {
     try {
         const body = String(req.body.body || '').trim();
         if (body.length < 2) return res.status(400).json({ error: 'Comment is too short' });
@@ -949,7 +1006,7 @@ app.post('/api/games/:id/comments', authenticate, async (req: any, res: any) => 
     }
 });
 
-app.post('/api/comments/:id/like', authenticate, async (req: any, res: any) => {
+app.post('/api/comments/:id/like', writeLimiter, authenticate, async (req: any, res: any) => {
     try {
         const comment = await prisma.gameComment.findFirst({ where: { id: req.params.id } });
         if (!comment) return res.status(404).json({ error: 'Comment not found' });
@@ -981,7 +1038,7 @@ app.get('/api/library', authenticate, async (req: any, res: any) => {
     } catch (e) { res.status(500).json({ error: 'Failed to fetch library' }); }
 });
 
-app.post('/api/library/:gameId', authenticate, async (req: any, res: any) => {
+app.post('/api/library/:gameId', writeLimiter, authenticate, async (req: any, res: any) => {
     try {
         const gameId = req.params.gameId;
         const userId = req.user.userId;
@@ -994,7 +1051,7 @@ app.post('/api/library/:gameId', authenticate, async (req: any, res: any) => {
     } catch (e: any) { res.status(500).json({ error: 'Database crashed on library add' }); }
 });
 
-app.patch('/api/library/:gameId', authenticate, async (req: any, res: any) => {
+app.patch('/api/library/:gameId', writeLimiter, authenticate, async (req: any, res: any) => {
     try {
         const { rating, status } = req.body;
         await prisma.userGame.updateMany({ where: { userId: req.user.userId, gameId: req.params.gameId }, data: { rating, status } });
@@ -1002,7 +1059,7 @@ app.patch('/api/library/:gameId', authenticate, async (req: any, res: any) => {
     } catch (e) { res.status(500).json({ error: 'Failed to update library entry' }); }
 });
 
-app.delete('/api/library/:gameId', authenticate, async (req: any, res: any) => {
+app.delete('/api/library/:gameId', writeLimiter, authenticate, async (req: any, res: any) => {
     try {
         await prisma.userGame.deleteMany({ where: { userId: req.user.userId, gameId: req.params.gameId } });
         res.json({ success: true });
@@ -1016,7 +1073,7 @@ app.get('/api/wishlist', authenticate, async (req: any, res: any) => {
     } catch (e) { res.status(500).json({ error: 'Failed to fetch wishlist' }); }
 });
 
-app.post('/api/wishlist/:gameId', authenticate, async (req: any, res: any) => {
+app.post('/api/wishlist/:gameId', writeLimiter, authenticate, async (req: any, res: any) => {
     try {
         const gameId = req.params.gameId;
         const userId = req.user.userId;
@@ -1031,7 +1088,7 @@ app.post('/api/wishlist/:gameId', authenticate, async (req: any, res: any) => {
     } catch (e: any) { res.status(500).json({ error: 'Database crashed on wishlist add' }); }
 });
 
-app.delete('/api/wishlist/:gameId', authenticate, async (req: any, res: any) => {
+app.delete('/api/wishlist/:gameId', writeLimiter, authenticate, async (req: any, res: any) => {
     try {
         await prisma.wishlistItem.deleteMany({ where: { userId: req.user.userId, gameId: req.params.gameId } });
         res.json({ success: true });
@@ -1053,7 +1110,7 @@ app.get('/api/preferences', authenticate, async (req: any, res: any) => {
     }
 });
 
-app.patch('/api/preferences', authenticate, async (req: any, res: any) => {
+app.patch('/api/preferences', writeLimiter, authenticate, async (req: any, res: any) => {
     try {
         const requestedGenres = Array.isArray(req.body.favoriteGenres) ? req.body.favoriteGenres : [];
         const games = await prisma.game.findMany({ select: { genres: true } });
@@ -1122,7 +1179,7 @@ app.get('/api/users/:id/profile', async (req, res) => {
     }
 });
 
-app.patch('/api/profile', authenticate, async (req: any, res: any) => {
+app.patch('/api/profile', writeLimiter, authenticate, async (req: any, res: any) => {
     try {
         const avatarUrl = String(req.body.avatarUrl || '').trim();
         const steamProfileUrl = String(req.body.steamProfileUrl || '').trim();
@@ -1131,7 +1188,7 @@ app.patch('/api/profile', authenticate, async (req: any, res: any) => {
         const isUrl = (value: string) => !value || /^https?:\/\/\S+\.\S+/.test(value);
         if (!isAvatar(avatarUrl)) return res.status(400).json({ error: 'Avatar must be an image file' });
         if (!isUrl(steamProfileUrl)) return res.status(400).json({ error: 'Steam profile must be a valid URL' });
-        if (avatarUrl.length > 2_000_000 || steamProfileUrl.length > 500) {
+        if (avatarUrl.length > 100_000 || steamProfileUrl.length > 500) {
             return res.status(400).json({ error: 'URL is too long' });
         }
 
