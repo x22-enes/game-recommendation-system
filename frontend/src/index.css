@@ -189,10 +189,6 @@
     @apply bg-cyan-400/15 text-cyan-100 shadow-[inset_3px_0_0_0_rgba(34,211,238,0.9)];
   }
 
-  .genre-count-badge {
-    @apply ml-auto inline-flex min-w-8 justify-center rounded-full border border-white/10 bg-slate-950/60 px-2 py-0.5 text-[0.65rem] font-black text-slate-400;
-  }
-
   .empty-state {
     @apply surface rounded-xl px-6 py-14 text-center;
   }

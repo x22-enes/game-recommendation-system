@@ -173,15 +173,11 @@ function GenrePanel({
     value,
     onChange,
     options,
-    counts,
 }: {
     value: string;
     onChange: (genre: string) => void;
     options: string[];
-    counts: Record<string, number>;
 }) {
-    const countFor = (genre: string) => counts[genre] ?? 0;
-
     return (
         <section className="surface rounded-xl p-3">
             <div className="mb-3 flex items-center justify-between gap-3 px-1">
@@ -202,7 +198,6 @@ function GenrePanel({
                 >
                     <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-amber-300/25 bg-black/25 text-xs">#</span>
                     <span>Top Games</span>
-                    <span className="genre-count-badge">100</span>
                 </Link>
                 <Link
                     to="/top-games?mode=trending"
@@ -210,7 +205,6 @@ function GenrePanel({
                 >
                     <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-300/25 bg-black/25 text-xs">UP</span>
                     <span>Trending Games</span>
-                    <span className="genre-count-badge">100</span>
                 </Link>
             </div>
             <div className="max-h-[28rem] space-y-1 overflow-y-auto pr-1">
@@ -229,7 +223,6 @@ function GenrePanel({
                             <GenreIcon genre={genre} />
                         </span>
                         <span className="truncate">{genre}</span>
-                        <span className="genre-count-badge">{countFor(genre)}</span>
                     </button>
                 ))}
             </div>
@@ -250,7 +243,6 @@ export default function Home() {
     const [genreOptions, setGenreOptions] = useState(DEFAULT_GENRE_OPTIONS);
     const [browseSeed, setBrowseSeed] = useState(getBrowseSeed);
     const [sortMode, setSortMode] = useState<SortMode>('Popularity');
-    const [catalogGenreCounts, setCatalogGenreCounts] = useState<Record<string, number>>({});
 
     useEffect(() => {
         const nextSearch = searchParams.get('search') || '';
@@ -300,15 +292,10 @@ export default function Home() {
     };
 
     useEffect(() => {
-        Promise.all([
-            api.get('/genres'),
-            api.get('/genre-counts').catch(() => ({ data: {} })),
-        ])
-            .then(([genresRes, countsRes]) => {
-                const genres = Array.isArray(genresRes.data) ? genresRes.data.filter(Boolean) : [];
-                const counts = countsRes.data && typeof countsRes.data === 'object' ? countsRes.data : {};
+        api.get('/genres')
+            .then(res => {
+                const genres = Array.isArray(res.data) ? res.data.filter(Boolean) : [];
                 setGenreOptions(['All', ...genres.filter(item => item !== 'All')]);
-                setCatalogGenreCounts(counts);
             })
             .catch(() => setGenreOptions(DEFAULT_GENRE_OPTIONS));
     }, []);
@@ -362,21 +349,6 @@ export default function Home() {
     const platforms = useMemo(
         () => ['All', ...Array.from(new Set(games.flatMap(game => parsePlatforms(game.platforms)))).sort()],
         [games]
-    );
-
-    const visibleGenreCounts = useMemo(() => {
-        const counts: Record<string, number> = { All: games.length };
-        for (const game of games) {
-            for (const item of parseGenres(game.genres)) {
-                counts[item] = (counts[item] || 0) + 1;
-            }
-        }
-        return counts;
-    }, [games]);
-
-    const genreCounts = useMemo(
-        () => ({ ...visibleGenreCounts, ...catalogGenreCounts }),
-        [catalogGenreCounts, visibleGenreCounts]
     );
 
     const filteredGames = useMemo(() => {
@@ -466,7 +438,7 @@ export default function Home() {
 
             <div className="grid gap-6 lg:grid-cols-[17rem_1fr]">
                 <aside className="space-y-4">
-                    <GenrePanel value={genre} onChange={handleGenreChange} options={genreOptions} counts={genreCounts} />
+                    <GenrePanel value={genre} onChange={handleGenreChange} options={genreOptions} />
 
                     <div className="surface rounded-xl p-4">
                         <div className="mb-4">
