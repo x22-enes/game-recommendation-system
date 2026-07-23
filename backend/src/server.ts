@@ -485,6 +485,7 @@ const normalizeRankingTitle = (value: string) =>
     value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
 
 let availableGenresCache: { value: string[]; expiresAt: number } | null = null;
+let availableGenreCountsCache: { value: Record<string, number>; expiresAt: number } | null = null;
 const AVAILABLE_GENRES_CACHE_MS = 30 * 60 * 1000;
 
 const buildCuratedRanking = async (
@@ -542,15 +543,34 @@ const getAvailableGenres = async () => {
         return availableGenresCache.value;
     }
 
-    const games = await prisma.game.findMany({
-        select: { genres: true },
-    });
-    const genres = unique(games.flatMap(game => parseJsonArray(game.genres)));
+    const counts = await getAvailableGenreCounts();
+    const genres = unique(Object.keys(counts).filter(genre => genre !== 'All'));
     availableGenresCache = {
         value: genres,
         expiresAt: Date.now() + AVAILABLE_GENRES_CACHE_MS,
     };
     return genres;
+};
+
+const getAvailableGenreCounts = async () => {
+    if (availableGenreCountsCache && availableGenreCountsCache.expiresAt > Date.now()) {
+        return availableGenreCountsCache.value;
+    }
+
+    const games = await prisma.game.findMany({
+        select: { genres: true },
+    });
+    const counts: Record<string, number> = { All: games.length };
+    games.forEach(game => {
+        parseJsonArray(game.genres).forEach(genre => {
+            counts[genre] = (counts[genre] || 0) + 1;
+        });
+    });
+    availableGenreCountsCache = {
+        value: counts,
+        expiresAt: Date.now() + AVAILABLE_GENRES_CACHE_MS,
+    };
+    return counts;
 };
 
 const rankCommunityGames = async (limit = 25) => {
@@ -760,6 +780,15 @@ app.get('/api/genres', async (_req, res) => {
     } catch (error) {
         console.error('Failed to load genres:', error);
         res.status(500).json({ error: 'Failed to load genres' });
+    }
+});
+
+app.get('/api/genre-counts', async (_req, res) => {
+    try {
+        res.json(await getAvailableGenreCounts());
+    } catch (error) {
+        console.error('Failed to load genre counts:', error);
+        res.status(500).json({ error: 'Failed to load genre counts' });
     }
 });
 

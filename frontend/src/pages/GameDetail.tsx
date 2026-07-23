@@ -89,7 +89,7 @@ function RelatedGameCard({ game }: { game: any }) {
     return (
         <Link to={`/games/${game.id}`} className="game-card group min-w-[11rem] max-w-[11rem] overflow-hidden">
             <div className="card-image-wrap">
-                <CoverArt game={game} className="aspect-[3/4] w-full transition-transform duration-500 group-hover:scale-105" />
+                <CoverArt game={game} className="card-cover transition-transform duration-500 group-hover:scale-105" />
                 <div className="absolute left-2 top-2 z-10">
                     <PlatformBadges platforms={platforms} limit={2} />
                 </div>
@@ -600,7 +600,7 @@ export default function GameDetail() {
                                 {steamDetails?.capsuleImage ? (
                                     <img src={steamDetails.capsuleImage} alt={game.title} className="w-full object-cover" />
                                 ) : (
-                                    <CoverArt game={game} className="aspect-[16/9] w-full" />
+                                    <CoverArt game={game} className="card-cover" />
                                 )}
                             </div>
                         )}

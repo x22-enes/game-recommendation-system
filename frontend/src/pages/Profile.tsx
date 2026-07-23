@@ -159,7 +159,7 @@ export function ProfileView({ endpoint = '/profile', editable = true }: { endpoi
                                         style={{ opacity: 0 }}
                                     >
                                         <div className="card-image-wrap">
-                                            <CoverArt game={game} className="h-52 w-full transition-transform duration-500 group-hover:scale-105" />
+                                            <CoverArt game={game} className="card-cover transition-transform duration-500 group-hover:scale-105" />
                                         </div>
                                         <div className="p-4">
                                             <h3 className="line-clamp-2 font-black text-white transition-colors group-hover:text-cyan-100">{game.title}</h3>

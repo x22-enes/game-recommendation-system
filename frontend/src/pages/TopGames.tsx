@@ -58,7 +58,7 @@ function TopRow({ item, mode }: { item: RankedGameItem; mode: Mode }) {
                 {item.rank}
             </div>
             <div className="card-image-wrap overflow-hidden rounded-lg border border-white/[0.06] bg-slate-950">
-                <CoverArt game={item.game} className="h-32 w-full transition-transform duration-500 group-hover:scale-[1.03] md:h-28" />
+                <CoverArt game={item.game} className="card-cover transition-transform duration-500 group-hover:scale-[1.03]" />
             </div>
             <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">

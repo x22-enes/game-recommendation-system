@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ExternalLink } from 'lucide-react';
 
 export type Game = {
   id: string;
@@ -69,7 +70,14 @@ export function PlatformBadges({
 
 export function PriceBadge({ game }: { game: Pick<Game, 'bestPrice'> }) {
   const price = Number(game.bestPrice?.price);
-  if (!Number.isFinite(price)) return <span className="chip text-slate-400">Store link</span>;
+  if (!Number.isFinite(price)) {
+    return (
+      <span className="store-link-badge">
+        <ExternalLink className="h-3 w-3" aria-hidden />
+        Store link
+      </span>
+    );
+  }
   if (price <= 0) return <span className="price-badge-free">Free</span>;
   return <span className="price-badge">From ${price.toFixed(2)}</span>;
 }
@@ -227,7 +235,7 @@ export function CoverArt({
       <img
         src={game.coverUrl}
         alt={game.title}
-        className={`bg-slate-950 object-contain ${className}`}
+        className={`bg-slate-950 object-cover ${className}`}
         loading="lazy"
         onError={() => setFailed(true)}
       />

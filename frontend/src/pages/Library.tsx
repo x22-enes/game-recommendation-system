@@ -92,7 +92,7 @@ export default function Library() {
                                 style={{ opacity: 0 }}
                             >
                                 <div className="card-image-wrap grid grid-cols-[7rem_1fr]">
-                                    <CoverArt game={item.game} className="h-40 w-full transition-transform duration-500 group-hover:scale-105" />
+                                    <CoverArt game={item.game} className="card-cover h-full min-h-40 transition-transform duration-500 group-hover:scale-105" />
                                     <div className="flex min-w-0 flex-col p-4">
                                         <Link to={`/games/${item.gameId}`} className="line-clamp-2 text-lg font-black leading-tight text-white hover:text-cyan-200">
                                             {item.game.title}

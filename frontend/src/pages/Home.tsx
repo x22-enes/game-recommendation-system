@@ -53,6 +53,8 @@ function getBrowseSeed() {
 const browseCacheKey = (search: string, genre: string, platform: string, seed: string) =>
     `browse:${BROWSE_CACHE_VERSION}:${seed}:${search.trim().toLowerCase() || 'all'}:${genre}:${platform}`;
 
+type SortMode = 'Popularity' | 'Price' | 'Name';
+
 function CompactSearchResult({ game }: { game: Game }) {
     const platforms = parsePlatforms(game.platforms);
     const genres = parseGenres(game.genres);
@@ -63,7 +65,7 @@ function CompactSearchResult({ game }: { game: Game }) {
             to={`/games/${game.id}`}
             className="group grid grid-cols-[8.5rem_1fr] overflow-hidden rounded-xl border border-white/[0.08] bg-slate-900/60 transition-all duration-300 hover:-translate-y-0.5 hover:border-cyan-400/25 hover:shadow-card-hover"
         >
-            <CoverArt game={game} className="h-24 w-full bg-slate-950" />
+            <CoverArt game={game} className="card-cover h-full" />
             <div className="flex min-w-0 flex-col justify-center gap-2 px-4 py-3">
                 <h3 className="truncate text-base font-bold text-white group-hover:text-cyan-200">{game.title}</h3>
                 <p className="line-clamp-1 text-xs text-slate-500">{genres.join(', ') || 'Adventure'}</p>
@@ -171,11 +173,15 @@ function GenrePanel({
     value,
     onChange,
     options,
+    counts,
 }: {
     value: string;
     onChange: (genre: string) => void;
     options: string[];
+    counts: Record<string, number>;
 }) {
+    const countFor = (genre: string) => counts[genre] ?? 0;
+
     return (
         <section className="surface rounded-xl p-3">
             <div className="mb-3 flex items-center justify-between gap-3 px-1">
@@ -192,17 +198,19 @@ function GenrePanel({
             <div className="mb-3 grid gap-2 border-b border-white/[0.06] pb-3">
                 <Link
                     to="/top-games"
-                    className="flex items-center gap-3 rounded-lg border border-amber-400/20 bg-amber-400/10 px-3 py-2.5 text-sm font-black text-amber-100 transition-all duration-200 hover:border-amber-300/35 hover:bg-amber-400/15"
+                    className="genre-list-item border border-amber-400/20 bg-amber-400/10 text-amber-100 hover:border-amber-300/35 hover:bg-amber-400/15"
                 >
                     <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-amber-300/25 bg-black/25 text-xs">#</span>
                     <span>Top Games</span>
+                    <span className="genre-count-badge">100</span>
                 </Link>
                 <Link
                     to="/top-games?mode=trending"
-                    className="flex items-center gap-3 rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-3 py-2.5 text-sm font-black text-emerald-100 transition-all duration-200 hover:border-emerald-300/35 hover:bg-emerald-400/15"
+                    className="genre-list-item border border-emerald-400/20 bg-emerald-400/10 text-emerald-100 hover:border-emerald-300/35 hover:bg-emerald-400/15"
                 >
                     <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-300/25 bg-black/25 text-xs">UP</span>
                     <span>Trending Games</span>
+                    <span className="genre-count-badge">100</span>
                 </Link>
             </div>
             <div className="max-h-[28rem] space-y-1 overflow-y-auto pr-1">
@@ -210,11 +218,7 @@ function GenrePanel({
                     <button
                         key={genre}
                         type="button"
-                        className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-bold transition-all duration-200 ${
-                            value === genre
-                                ? 'bg-cyan-400/15 text-cyan-100 shadow-[inset_3px_0_0_0_rgba(34,211,238,0.9)]'
-                                : 'text-slate-300 hover:bg-white/[0.06] hover:text-white'
-                        }`}
+                        className={`genre-list-item ${value === genre ? 'genre-list-item-active' : ''}`}
                         onClick={() => onChange(genre)}
                     >
                         <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border text-xs font-black ${
@@ -225,6 +229,7 @@ function GenrePanel({
                             <GenreIcon genre={genre} />
                         </span>
                         <span className="truncate">{genre}</span>
+                        <span className="genre-count-badge">{countFor(genre)}</span>
                     </button>
                 ))}
             </div>
@@ -244,6 +249,8 @@ export default function Home() {
     const [shuffling, setShuffling] = useState(false);
     const [genreOptions, setGenreOptions] = useState(DEFAULT_GENRE_OPTIONS);
     const [browseSeed, setBrowseSeed] = useState(getBrowseSeed);
+    const [sortMode, setSortMode] = useState<SortMode>('Popularity');
+    const [catalogGenreCounts, setCatalogGenreCounts] = useState<Record<string, number>>({});
 
     useEffect(() => {
         const nextSearch = searchParams.get('search') || '';
@@ -293,10 +300,15 @@ export default function Home() {
     };
 
     useEffect(() => {
-        api.get('/genres')
-            .then(res => {
-                const genres = Array.isArray(res.data) ? res.data.filter(Boolean) : [];
+        Promise.all([
+            api.get('/genres'),
+            api.get('/genre-counts').catch(() => ({ data: {} })),
+        ])
+            .then(([genresRes, countsRes]) => {
+                const genres = Array.isArray(genresRes.data) ? genresRes.data.filter(Boolean) : [];
+                const counts = countsRes.data && typeof countsRes.data === 'object' ? countsRes.data : {};
                 setGenreOptions(['All', ...genres.filter(item => item !== 'All')]);
+                setCatalogGenreCounts(counts);
             })
             .catch(() => setGenreOptions(DEFAULT_GENRE_OPTIONS));
     }, []);
@@ -352,13 +364,44 @@ export default function Home() {
         [games]
     );
 
+    const visibleGenreCounts = useMemo(() => {
+        const counts: Record<string, number> = { All: games.length };
+        for (const game of games) {
+            for (const item of parseGenres(game.genres)) {
+                counts[item] = (counts[item] || 0) + 1;
+            }
+        }
+        return counts;
+    }, [games]);
+
+    const genreCounts = useMemo(
+        () => ({ ...visibleGenreCounts, ...catalogGenreCounts }),
+        [catalogGenreCounts, visibleGenreCounts]
+    );
+
     const filteredGames = useMemo(() => {
-        return games.filter(game => {
+        const filtered = games.filter(game => {
             const genreMatch = genre === 'All' || parseGenres(game.genres).includes(genre);
             const platformMatch = platform === 'All' || parsePlatforms(game.platforms).includes(platform);
             return genreMatch && platformMatch;
         });
-    }, [games, genre, platform]);
+
+        if (sortMode === 'Name') {
+            return [...filtered].sort((a, b) => a.title.localeCompare(b.title));
+        }
+
+        if (sortMode === 'Price') {
+            return [...filtered].sort((a, b) => {
+                const aPrice = Number(a.bestPrice?.price);
+                const bPrice = Number(b.bestPrice?.price);
+                const aValue = Number.isFinite(aPrice) ? aPrice : Number.POSITIVE_INFINITY;
+                const bValue = Number.isFinite(bPrice) ? bPrice : Number.POSITIVE_INFINITY;
+                return aValue - bValue || a.title.localeCompare(b.title);
+            });
+        }
+
+        return filtered;
+    }, [games, genre, platform, sortMode]);
 
     const compactResults = search.trim() ? filteredGames.slice(0, 6) : [];
     const featuredGame = filteredGames[0];
@@ -403,7 +446,7 @@ export default function Home() {
                         {featuredGame ? (
                             <Link to={`/games/${featuredGame.id}`} className="group block h-full">
                                 <div className="card-image-wrap overflow-hidden rounded-xl border border-white/[0.08]">
-                                    <CoverArt game={featuredGame} className="aspect-[16/10] w-full transition-transform duration-500 group-hover:scale-105" />
+                                    <CoverArt game={featuredGame} className="card-cover transition-transform duration-500 group-hover:scale-105" />
                                     <div className="featured-overlay" />
                                 </div>
                                 <div className="mt-3 flex items-start justify-between gap-3">
@@ -423,7 +466,7 @@ export default function Home() {
 
             <div className="grid gap-6 lg:grid-cols-[17rem_1fr]">
                 <aside className="space-y-4">
-                    <GenrePanel value={genre} onChange={handleGenreChange} options={genreOptions} />
+                    <GenrePanel value={genre} onChange={handleGenreChange} options={genreOptions} counts={genreCounts} />
 
                     <div className="surface rounded-xl p-4">
                         <div className="mb-4">
@@ -467,7 +510,20 @@ export default function Home() {
                                         : `Random ${genre} Games`}
                             </h2>
                         </div>
-                        <span className="chip w-fit">{filteredGames.length} matches</span>
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="chip w-fit">{filteredGames.length} matches</span>
+                            <label className="sr-only" htmlFor="browse-sort">Sort by</label>
+                            <select
+                                id="browse-sort"
+                                className="field w-auto min-w-36 py-2 text-xs"
+                                value={sortMode}
+                                onChange={(event) => setSortMode(event.target.value as SortMode)}
+                            >
+                                <option value="Popularity">Sort by Popularity</option>
+                                <option value="Price">Sort by Price</option>
+                                <option value="Name">Sort by Name</option>
+                            </select>
+                        </div>
                     </div>
 
                     {loading ? (

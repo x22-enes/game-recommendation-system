@@ -56,7 +56,7 @@ export default function Wishlist() {
                             style={{ opacity: 0 }}
                         >
                             <Link to={`/games/${game.id}`} className="card-image-wrap block">
-                                <CoverArt game={game} className="aspect-[3/4] w-full transition-transform duration-500 group-hover:scale-105" />
+                                <CoverArt game={game} className="card-cover transition-transform duration-500 group-hover:scale-105" />
                             </Link>
 
                             <div className="flex flex-1 flex-col p-4">

@@ -47,7 +47,7 @@ function RecommendationCard({ item, rank }: { item: any; rank: number }) {
             style={{ opacity: 0 }}
         >
             <div className="card-image-wrap relative min-h-44 sm:min-h-full">
-                <CoverArt game={item.game} className="h-full min-h-44 w-full transition-transform duration-500 group-hover:scale-105 sm:min-h-full" />
+                <CoverArt game={item.game} className="card-cover h-full min-h-44 transition-transform duration-500 group-hover:scale-105 sm:min-h-full" />
                 <div className="absolute left-3 top-3 rounded-lg border border-white/10 bg-black/50 px-2.5 py-1 text-sm font-black text-white backdrop-blur-sm">
                     #{rank}
                 </div>
@@ -150,7 +150,7 @@ export default function Recommendations() {
                 <>
                     <Link to={`/games/${featured.game.id}`} className="market-card group mb-6 grid overflow-hidden lg:grid-cols-[1.15fr_1fr]">
                         <div className="card-image-wrap relative min-h-[18rem] lg:min-h-[22rem]">
-                            <CoverArt game={featured.game} className="h-full min-h-[18rem] w-full transition-transform duration-700 group-hover:scale-105 lg:min-h-[22rem]" />
+                            <CoverArt game={featured.game} className="card-cover h-full min-h-[18rem] transition-transform duration-700 group-hover:scale-105 lg:min-h-[22rem]" />
                             <div className="featured-overlay" />
                             <div className="absolute left-4 top-4 flex items-center gap-2">
                                 <span className="rounded-lg border border-cyan-400/30 bg-black/60 px-3 py-1.5 text-sm font-black text-cyan-200 backdrop-blur-sm">
