@@ -12,8 +12,8 @@ export default function Navbar() {
         <nav className="sticky top-0 z-30 -mx-4 mb-8 border-b border-white/[0.08] bg-[#080b10]/85 px-4 py-3 backdrop-blur-xl sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <Link to="/" className="group flex shrink-0 items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/30 bg-gradient-to-br from-cyan-400 to-cyan-500 text-base font-black text-slate-950 shadow-glow-cyan transition-transform duration-200 group-hover:scale-105">
-                        MMM
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/30 bg-gradient-to-br from-cyan-400 to-cyan-500 text-[0.64rem] font-black text-slate-950 shadow-glow-cyan transition-transform duration-200 group-hover:scale-105">
+                        M&M&M
                     </span>
                     <span>
                         <span className="block text-base font-black tracking-tight text-white transition-colors group-hover:text-cyan-200">
