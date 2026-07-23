@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../api';
-import { CoverArt, Game, gameBlurb, parseGenres, parsePlatforms, PlatformBadges, PriceBadge } from '../utils/games';
+import { CoverArt, Game, gameBlurb, MmmScoreStrip, parseGenres, parsePlatforms, PlatformBadges, PriceBadge } from '../utils/games';
 
 const DEFAULT_GENRE_OPTIONS = [
     'All',
@@ -40,6 +40,7 @@ function CompactSearchResult({ game }: { game: Game }) {
                 <h3 className="truncate text-base font-bold text-white group-hover:text-cyan-200">{game.title}</h3>
                 <p className="line-clamp-1 text-xs text-slate-500">{genres.join(', ') || 'Adventure'}</p>
                 <p className="line-clamp-1 text-xs leading-5 text-slate-400">{description}</p>
+                <MmmScoreStrip game={game} compact />
                 <div className="flex flex-wrap items-center gap-2">
                     <PlatformBadges platforms={platforms} limit={3} />
                     <PriceBadge game={game} />
@@ -80,6 +81,9 @@ function GameMarketCard({ game, index = 0 }: { game: Game; index?: number }) {
                 <p className="mt-3 line-clamp-2 min-h-[2.5rem] text-sm leading-5 text-slate-400">
                     {description}
                 </p>
+                <div className="mt-3">
+                    <MmmScoreStrip game={game} />
+                </div>
                 <div className="mt-auto flex items-center justify-between border-t border-white/[0.06] pt-3">
                     <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">View details</span>
                     <span className="text-sm text-cyan-400 opacity-0 transition-all duration-200 group-hover:translate-x-0.5 group-hover:opacity-100" aria-hidden>→</span>
@@ -340,10 +344,10 @@ export default function Home() {
                     <div className="p-5 sm:p-6 lg:p-8">
                         <p className="eyebrow">Discover</p>
                         <h1 className="mt-1 text-3xl font-black tracking-tight text-white sm:text-4xl md:text-5xl">
-                            Game Catalog
+                            MMM Recs Catalog
                         </h1>
                         <p className="mt-2 max-w-xl text-sm leading-6 text-slate-400 sm:text-base">
-                            Browse store games with cover art, platform data, and recommendation-ready metadata.
+                            Mini, Mid, and Max game recommendations matched by genre, platform, price, and catalog signals.
                         </p>
                         <div className="relative mt-5 max-w-xl">
                             <label className="sidebar-label" htmlFor="catalog-search">Search catalog</label>

@@ -13,14 +13,14 @@ export default function Navbar() {
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <Link to="/" className="group flex shrink-0 items-center gap-3">
                     <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-400/30 bg-gradient-to-br from-cyan-400 to-cyan-500 text-base font-black text-slate-950 shadow-glow-cyan transition-transform duration-200 group-hover:scale-105">
-                        GR
+                        MMM
                     </span>
                     <span>
                         <span className="block text-base font-black tracking-tight text-white transition-colors group-hover:text-cyan-200">
-                            Game Recs
+                            MMM Recs
                         </span>
                         <span className="block text-[0.68rem] font-medium text-slate-500">
-                            Personal discovery system
+                            Mini Mid Max recommendations
                         </span>
                     </span>
                 </Link>

@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
-import { CoverArt, gameBlurb, parseGenres, parsePlatforms, PlatformBadges } from '../utils/games';
+import { CoverArt, gameBlurb, MmmScoreStrip, parseGenres, parsePlatforms, PlatformBadges } from '../utils/games';
 
 function ConfidenceBar({ value }: { value: number }) {
     return (
@@ -68,6 +68,7 @@ function RecommendationCard({ item, rank }: { item: any; rank: number }) {
                         {description}
                     </p>
                 </div>
+                <MmmScoreStrip game={item.game} compact />
                 <ConfidenceBar value={confidence} />
                 <div className="mt-auto rounded-lg border border-white/[0.06] bg-slate-950/30 p-3">
                     <p className="mb-2 text-[0.65rem] font-bold uppercase tracking-wide text-cyan-400">Why it matches</p>
@@ -171,6 +172,9 @@ export default function Recommendations() {
                             <p className="mt-4 line-clamp-3 text-sm leading-6 text-slate-300">
                                 {gameBlurb(featured.game, 'A high-confidence recommendation selected from your taste profile, ratings, preferred genres, and platform fit.')}
                             </p>
+                            <div className="mt-5">
+                                <MmmScoreStrip game={featured.game} />
+                            </div>
                             <div className="mt-5">
                                 <ConfidenceBar value={featured.confidence || 35} />
                             </div>

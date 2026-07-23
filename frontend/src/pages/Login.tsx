@@ -7,16 +7,16 @@ type AuthMode = 'login' | 'register';
 
 const siteHighlights = [
     {
-        title: 'Discover',
-        copy: 'Browse a large game catalog with cover art, genres, platforms, and store price signals.',
+        title: 'Mini',
+        copy: 'MiniMidMax indie game recommendations for quick, focused, and easy-to-start games.',
     },
     {
-        title: 'Organize',
-        copy: 'Save games to your library or wishlist and track what you plan to play, play now, or finish.',
+        title: 'Mid',
+        copy: 'Best low-spec PC game recommendations for balanced games that fit everyday play.',
     },
     {
-        title: 'Personalize',
-        copy: 'Rate games and set genre preferences so recommendations learn what actually fits your taste.',
+        title: 'Max',
+        copy: 'Short story games recommendations plus deeper premium picks when you want a bigger experience.',
     },
 ];
 
@@ -66,10 +66,10 @@ export default function Login() {
             <section className="surface-elevated rounded-xl p-6 sm:p-8">
                 <p className="eyebrow">Welcome</p>
                 <h1 className="mt-3 text-4xl font-black tracking-tight text-white md:text-5xl">
-                    Build a smarter game collection.
+                    MMM Recs finds your next game.
                 </h1>
                 <p className="mt-4 max-w-2xl text-base leading-7 text-slate-400">
-                    Game Recs helps you explore games faster, keep your personal collection organized, and get recommendations based on your own ratings, wishlist, preferred genres, and platform choices.
+                    MMM Recs is a MiniMidMax game discovery system: Mini for light and low-spec picks, Mid for balanced everyday games, and Max for deeper premium titles.
                 </p>
 
                 <div className="mt-7 grid gap-3 sm:grid-cols-3">
@@ -82,9 +82,9 @@ export default function Login() {
                 </div>
 
                 <div className="mt-6 rounded-xl border border-cyan-400/15 bg-cyan-400/[0.06] p-4">
-                    <p className="text-sm font-bold text-cyan-100">What improves your recommendations?</p>
+                    <p className="text-sm font-bold text-cyan-100">How Mini / Mid / Max scores work</p>
                     <p className="mt-2 text-sm leading-6 text-slate-400">
-                        Add games to your library, rate completed titles, save wishlist picks, and choose favorite genres. The system uses those signals to surface games that are closer to your play style.
+                        Each game gets Mini, Mid, and Max scores from its genre, platform, price, critic data, and your own library signals. The highest score shows the best way to approach that game.
                     </p>
                 </div>
             </section>

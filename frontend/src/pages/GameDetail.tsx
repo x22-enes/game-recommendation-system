@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import api from '../api';
-import { CoverArt, gameBlurb, parseGenres, parsePlatforms, PlatformBadges, PriceBadge } from '../utils/games';
+import { CoverArt, gameBlurb, MmmScoreStrip, parseGenres, parsePlatforms, PlatformBadges, PriceBadge } from '../utils/games';
 
 function UserAvatar({ user, size = 'md' }: { user: any; size?: 'sm' | 'md' }) {
     const [failed, setFailed] = useState(false);
@@ -295,6 +295,9 @@ export default function GameDetail() {
                             </div>
                             <div className="mt-3 flex flex-wrap justify-center gap-2 lg:justify-start">
                                 <PlatformBadges platforms={platforms} />
+                            </div>
+                            <div className="mt-4 max-w-md lg:max-w-lg">
+                                <MmmScoreStrip game={game} />
                             </div>
                         </div>
                         <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
@@ -602,6 +605,10 @@ export default function GameDetail() {
                             </div>
                         )}
                         <p className="text-sm leading-6 text-slate-300">{primaryDescription}</p>
+                        <div className="mt-4">
+                            <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Mini Mid Max score</p>
+                            <MmmScoreStrip game={game} />
+                        </div>
                         <div className="mt-4 flex flex-wrap gap-2">
                             {(steamDetails?.genres?.length ? steamDetails.genres : genres).slice(0, 4).map((item: string) => (
                                 <span key={item} className="rounded-md border border-emerald-400/20 bg-emerald-400/10 px-2 py-1 text-[0.65rem] font-black uppercase tracking-wide text-emerald-300">

@@ -9,6 +9,10 @@ export type Game = {
   platforms?: string;
   criticScore?: number | null;
   criticSource?: string | null;
+  ratingSummary?: {
+    average?: number | null;
+    count?: number | null;
+  } | null;
   bestPrice?: {
     price?: number | null;
   } | null;
@@ -68,6 +72,99 @@ export function PriceBadge({ game }: { game: Pick<Game, 'bestPrice'> }) {
   if (!Number.isFinite(price)) return <span className="chip text-slate-400">Store link</span>;
   if (price <= 0) return <span className="price-badge-free">Free</span>;
   return <span className="price-badge">From ${price.toFixed(2)}</span>;
+}
+
+const clampScore = (value: number) => Math.max(1, Math.min(99, Math.round(value)));
+
+function includesAny(values: string[], needles: string[]) {
+  const normalized = values.map(value => value.toLowerCase());
+  return needles.some(needle => normalized.some(value => value.includes(needle)));
+}
+
+export function getMmmScores(game: Pick<Game, 'title' | 'genres' | 'platforms' | 'bestPrice' | 'criticScore' | 'ratingSummary'>) {
+  const genres = parseGenres(game.genres);
+  const platforms = parsePlatforms(game.platforms);
+  const price = Number(game.bestPrice?.price);
+  const hasPrice = Number.isFinite(price);
+  const criticScore = Number(game.criticScore);
+  const communityScore = Number(game.ratingSummary?.average) * 20;
+  const qualityScore = Number.isFinite(criticScore)
+    ? criticScore
+    : Number.isFinite(communityScore)
+      ? communityScore
+      : 70;
+
+  const compactGenres = ['puzzle', 'platformer', 'arcade', 'casual', 'hidden object', 'word', 'card'];
+  const deepGenres = ['open world', 'rpg', 'survival', 'strategy', 'simulation', 'mmo'];
+  const actionGenres = ['action', 'shooter', 'racing', 'sports', 'fighting'];
+  const isCompact = includesAny(genres, compactGenres);
+  const isDeep = includesAny(genres, deepGenres);
+  const isAction = includesAny(genres, actionGenres);
+  const hasPc = platforms.includes('PC');
+  const hasManyPlatforms = platforms.length >= 3;
+
+  const mini = clampScore(
+    48 +
+    (isCompact ? 18 : 0) +
+    (hasPrice && price <= 5 ? 14 : 0) +
+    (hasPrice && price === 0 ? 10 : 0) +
+    (hasPc ? 7 : 0) +
+    (isDeep ? -10 : 0) +
+    (qualityScore - 70) * 0.18
+  );
+
+  const mid = clampScore(
+    54 +
+    (hasManyPlatforms ? 10 : 0) +
+    (genres.length >= 2 ? 8 : 0) +
+    (hasPrice && price > 5 && price <= 25 ? 10 : 0) +
+    (isAction ? 5 : 0) +
+    Math.abs(qualityScore - 82) * -0.12 +
+    (qualityScore - 70) * 0.22
+  );
+
+  const max = clampScore(
+    46 +
+    (isDeep ? 17 : 0) +
+    (isAction ? 7 : 0) +
+    (qualityScore - 70) * 0.55 +
+    (hasPrice && price >= 30 ? 7 : 0) +
+    (platforms.length >= 2 ? 5 : 0)
+  );
+
+  const best = [
+    { key: 'Mini', score: mini, label: 'Light, quick, low-spec fit' },
+    { key: 'Mid', score: mid, label: 'Balanced everyday pick' },
+    { key: 'Max', score: max, label: 'Deep, premium, high-commitment fit' },
+  ].sort((a, b) => b.score - a.score)[0];
+
+  return { mini, mid, max, best };
+}
+
+export function MmmScoreStrip({
+  game,
+  compact = false,
+}: {
+  game: Pick<Game, 'title' | 'genres' | 'platforms' | 'bestPrice' | 'criticScore' | 'ratingSummary'>;
+  compact?: boolean;
+}) {
+  const scores = getMmmScores(game);
+  const items = [
+    { label: 'Mini', value: scores.mini },
+    { label: 'Mid', value: scores.mid },
+    { label: 'Max', value: scores.max },
+  ];
+
+  return (
+    <div className={compact ? 'mmm-score-strip mmm-score-strip-compact' : 'mmm-score-strip'}>
+      {items.map(item => (
+        <span key={item.label} className={item.label === scores.best.key ? 'mmm-score mmm-score-active' : 'mmm-score'}>
+          <span>{item.label}</span>
+          <strong>{item.value}</strong>
+        </span>
+      ))}
+    </div>
+  );
 }
 
 function isGenericImportedDescription(description?: string) {
@@ -147,7 +244,7 @@ export function CoverArt({
           {primaryGenre}
         </div>
         <div>
-          <p className="mb-2 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-slate-500">Game Recs</p>
+          <p className="mb-2 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-slate-500">MMM Recs</p>
           <h3 className="line-clamp-3 text-xl font-black leading-tight text-white">{game.title}</h3>
         </div>
       </div>

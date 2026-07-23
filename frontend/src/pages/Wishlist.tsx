@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
-import { CoverArt, gameBlurb, parseGenres, parsePlatforms, PlatformBadges } from '../utils/games';
+import { CoverArt, gameBlurb, MmmScoreStrip, parseGenres, parsePlatforms, PlatformBadges } from '../utils/games';
 
 export default function Wishlist() {
     const [wishlist, setWishlist] = useState<any[]>([]);
@@ -69,6 +69,9 @@ export default function Wishlist() {
                                 </p>
                                 <div className="mt-3">
                                     <PlatformBadges platforms={parsePlatforms(game.platforms)} limit={3} />
+                                </div>
+                                <div className="mt-3">
+                                    <MmmScoreStrip game={game} compact />
                                 </div>
                                 <div className="mt-auto flex flex-col gap-2 pt-5">
                                     <button onClick={() => moveToLibrary(game.id)} className="btn-primary w-full">

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
-import { CoverArt, gameBlurb, parseGenres, parsePlatforms, PlatformBadges } from '../utils/games';
+import { CoverArt, gameBlurb, MmmScoreStrip, parseGenres, parsePlatforms, PlatformBadges } from '../utils/games';
 
 const filters = ['All', 'Plan to Play', 'Playing', 'Completed'];
 
@@ -103,6 +103,9 @@ export default function Library() {
                                         </p>
                                         <div className="mt-3">
                                             <PlatformBadges platforms={platforms} limit={3} />
+                                        </div>
+                                        <div className="mt-3">
+                                            <MmmScoreStrip game={item.game} compact />
                                         </div>
 
                                         <label className="mt-4 text-xs font-bold uppercase tracking-wide text-slate-500">Status</label>

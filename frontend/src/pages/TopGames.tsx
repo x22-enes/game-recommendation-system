@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../api';
-import { CoverArt, Game, gameBlurb, parseGenres, parsePlatforms } from '../utils/games';
+import { CoverArt, Game, gameBlurb, MmmScoreStrip, parseGenres, parsePlatforms } from '../utils/games';
 
 type RankedGameItem = {
     rank: number;
@@ -80,6 +80,9 @@ function TopRow({ item, mode }: { item: RankedGameItem; mode: Mode }) {
                         <span key={platform} className="platform-badge">{platform}</span>
                     ))}
                     <span className="chip">{item.source}</span>
+                </div>
+                <div className="mt-3 max-w-sm">
+                    <MmmScoreStrip game={item.game} compact />
                 </div>
             </div>
             <div className={`min-w-[6rem] rounded-xl border px-4 py-3 text-center ${scoreTone(item.score, mode)}`}>
