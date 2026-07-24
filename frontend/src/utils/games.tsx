@@ -91,9 +91,9 @@ function includesAny(values: string[], needles: string[]) {
 }
 
 const mmmScoreHelp = {
-  Mini: 'Sürətli/yüngül sessiya üçün uyğunluq',
-  Mid: 'Balanslaşdırılmış gündəlik seçim',
-  Max: 'Dərin, premium, yüksək öhdəlik tələb edən oyun',
+  Mini: 'Best for quick, lightweight play sessions',
+  Mid: 'Balanced everyday recommendation fit',
+  Max: 'Deep, premium, high-commitment game fit',
 };
 
 export function getMmmScores(game: Pick<Game, 'title' | 'genres' | 'platforms' | 'bestPrice' | 'criticScore' | 'ratingSummary'>) {
@@ -200,8 +200,8 @@ export function MmmScoreStrip({
         ))}
       </div>
       {!scores.hasQualityData && (
-        <span className="mmm-estimated-badge" title="Critic və community reytinqi yoxdur, bu bal janr/platform/qiymət siqnallarından təxmini hesablanıb.">
-          Reytinq məlumatı yoxdur
+        <span className="mmm-estimated-badge" title="No critic or community rating is available. This score is estimated from genre, platform, and price signals.">
+          No rating data
         </span>
       )}
     </div>
