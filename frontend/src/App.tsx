@@ -11,6 +11,7 @@ import Profile from './pages/Profile';
 import PublicProfile from './pages/PublicProfile';
 import TopGames from './pages/TopGames';
 import ToastContainer from './components/ToastContainer';
+import AnalyticsTracker from './components/AnalyticsTracker';
 import { ToastProvider } from './context/ToastContext';
 
 function App() {
@@ -19,6 +20,7 @@ function App() {
       <ToastProvider>
         <div className="app-shell">
           <div className="page-container">
+            <AnalyticsTracker />
             <Navbar />
             <ToastContainer />
             <Routes>
