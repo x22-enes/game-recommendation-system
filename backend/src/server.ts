@@ -153,6 +153,8 @@ const cleanBrowseSeed = (value: unknown) =>
         .replace(/[^a-zA-Z0-9_-]/g, '')
         .slice(0, 80);
 
+const SITE_URL = (process.env.SITE_URL || 'https://mmmrecs.com').replace(/\/$/, '');
+
 const isSafeUsername = (value: string) => /^[a-zA-Z0-9_-]{3,24}$/.test(value);
 
 const signUserToken = (userId: string) => jwt.sign({ userId }, JWT_SECRET, { expiresIn: '7d' });
@@ -1354,6 +1356,72 @@ app.get('/api/recommendations', authenticate, async (req: any, res: any) => {
     } catch(e) { 
         console.error(e);
         res.status(500).json([]); 
+    }
+});
+
+const escapeXml = (value: string) =>
+    value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+
+app.get('/robots.txt', (_req, res) => {
+    res.type('text/plain').send([
+        'User-agent: *',
+        'Allow: /',
+        `Sitemap: ${SITE_URL}/sitemap.xml`,
+        '',
+    ].join('\n'));
+});
+
+app.get('/sitemap.xml', async (_req, res) => {
+    try {
+        const staticRoutes = [
+            { path: '/', priority: '1.0', changefreq: 'daily' },
+            { path: '/top-games', priority: '0.8', changefreq: 'daily' },
+            { path: '/login', priority: '0.3', changefreq: 'monthly' },
+        ];
+
+        const games = await prisma.game.findMany({
+            where: { coverUrl: { startsWith: 'http' } },
+            select: { id: true },
+            orderBy: [{ criticScore: 'desc' }, { title: 'asc' }],
+            take: 1000,
+        });
+
+        const urls = [
+            ...staticRoutes.map(route => ({
+                loc: `${SITE_URL}${route.path}`,
+                changefreq: route.changefreq,
+                priority: route.priority,
+            })),
+            ...games.map(game => ({
+                loc: `${SITE_URL}/games/${game.id}`,
+                changefreq: 'weekly',
+                priority: '0.7',
+            })),
+        ];
+
+        const xml = [
+            '<?xml version="1.0" encoding="UTF-8"?>',
+            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
+            ...urls.map(url => [
+                '  <url>',
+                `    <loc>${escapeXml(url.loc)}</loc>`,
+                `    <changefreq>${url.changefreq}</changefreq>`,
+                `    <priority>${url.priority}</priority>`,
+                '  </url>',
+            ].join('\n')),
+            '</urlset>',
+            '',
+        ].join('\n');
+
+        res.type('application/xml').send(xml);
+    } catch (error) {
+        console.error('Failed to generate sitemap:', error);
+        res.status(500).type('text/plain').send('Could not generate sitemap');
     }
 });
 
