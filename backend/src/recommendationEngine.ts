@@ -37,11 +37,36 @@ type CollaborativeSignals = {
     games: Map<string, GameRecord>;
 };
 
+type WeightedLabel = {
+    weight: number;
+    display: string;
+};
+
+type ScoreBreakdown = {
+    contentScore: number;
+    tasteScore: number;
+    qualityScore: number;
+    platformScore: number;
+    priceScore: number;
+    collaborativeBoost: number;
+    penalty: number;
+    rawScore: number;
+    genreAffinity: number;
+    dislikedPenalty: number;
+    bestLikedSimilarity: number;
+    bestLikedTitle: string | null;
+    bestLikedSharedTitleTokens: number;
+    bestDislikedSimilarity: number;
+    bestDislikedTitle: string | null;
+    bestDislikedSharedTitleTokens: number;
+};
+
 type ScoredGame = {
     game: GameRecord;
     score: number;
     confidence: number;
     reasons: string[];
+    debugBreakdown?: ScoreBreakdown;
     debug: {
         primaryGenre: string;
         franchise: string;
@@ -57,6 +82,31 @@ const DEFAULT_FAVORITE_GENRES = ['RPG', 'Action', 'Adventure'];
 const DEFAULT_PLATFORM = 'PC';
 const MAX_TITLE_TOKEN_QUERIES = 12;
 const MAX_CANDIDATES = 6000;
+const INCLUDE_RECOMMENDATION_DEBUG = process.env.NODE_ENV !== 'production';
+
+// Hand-tuned scoring constants. Run `npm run audit:recommendations --prefix backend`
+// against a representative database before changing these weights.
+const SCORE_WEIGHTS = {
+    genreAffinityMultiplier: 2.2,
+    contentScoreCap: 24,
+    similarLikedMultiplier: 16,
+    similarLikedCap: 11,
+    wishlistScore: 12,
+    activeGenreOverlapScore: 4,
+    tasteScoreCap: 25,
+    criticScoreCap: 11,
+    coverQualityBonus: 2,
+    seedQualityBonus: 2,
+    noPlatformScore: 2,
+    exactPlatformScore: 10,
+    pcFallbackPlatformScore: 7,
+    otherPlatformScore: 3,
+    collaborativeMultiplier: 8,
+    collaborativeCap: 12,
+    dislikedGenreMultiplier: 1.8,
+    dislikedSimilarityMultiplier: 8,
+    penaltyCap: 18,
+};
 
 function parseJsonArray(value?: string | null): string[] {
     if (!value) return [];
@@ -117,8 +167,17 @@ function addWeight(weights: Map<string, number>, key: string, amount: number) {
     weights.set(key, (weights.get(key) || 0) + amount);
 }
 
-function weightedGenreScore(genres: string[], weights: Map<string, number>) {
-    return genres.reduce((sum, genre) => sum + (weights.get(genreKey(genre)) || 0), 0);
+function addLabeledWeight(weights: Map<string, WeightedLabel>, label: string, amount: number) {
+    const key = genreKey(label);
+    const existing = weights.get(key);
+    weights.set(key, {
+        weight: (existing?.weight || 0) + amount,
+        display: existing?.display || label,
+    });
+}
+
+function weightedGenreScore(genres: string[], weights: Map<string, WeightedLabel>) {
+    return genres.reduce((sum, genre) => sum + (weights.get(genreKey(genre))?.weight || 0), 0);
 }
 
 function bestSimilarLikedGame(candidate: GameRecord, likedGames: GameRecord[]) {
@@ -127,11 +186,14 @@ function bestSimilarLikedGame(candidate: GameRecord, likedGames: GameRecord[]) {
 
     return likedGames
         .map(game => {
+            const likedTokens = titleTokens(game.title);
+            const sharedTitleTokens = candidateTokens.filter(token => likedTokens.includes(token)).length;
             const genreSimilarity = overlapScore(candidateGenres, parseJsonArray(game.genres).map(genreKey));
-            const titleSimilarity = overlapScore(candidateTokens, titleTokens(game.title));
+            const titleSimilarity = sharedTitleTokens >= 2 ? overlapScore(candidateTokens, likedTokens) : 0;
             return {
                 game,
-                similarity: genreSimilarity * 0.75 + titleSimilarity * 0.25,
+                similarity: genreSimilarity * 0.85 + titleSimilarity * 0.15,
+                sharedTitleTokens,
             };
         })
         .sort((a, b) => b.similarity - a.similarity)[0] || null;
@@ -164,11 +226,11 @@ function priceSignal(prices: StorePriceRecord[]) {
 function buildTasteProfile(user: any, library: LibraryItem[], wishlist: WishlistItem[]) {
     const favoriteGenres = parseJsonArray(user?.favoriteGenres);
     const explicitFavorites = favoriteGenres.length > 0 ? favoriteGenres : DEFAULT_FAVORITE_GENRES;
-    const genreWeights = new Map<string, number>();
-    const dislikedGenreWeights = new Map<string, number>();
+    const genreWeights = new Map<string, WeightedLabel>();
+    const dislikedGenreWeights = new Map<string, WeightedLabel>();
     const platformWeights = new Map<string, number>();
 
-    explicitFavorites.forEach(genre => addWeight(genreWeights, genreKey(genre), 4));
+    explicitFavorites.forEach(genre => addLabeledWeight(genreWeights, genre, 4));
 
     for (const item of library) {
         const rating = item.rating || 0;
@@ -183,17 +245,17 @@ function buildTasteProfile(user: any, library: LibraryItem[], wishlist: Wishlist
             rating >= 3 ? 1 : 0;
 
         if (positiveWeight > 0) {
-            genres.forEach(genre => addWeight(genreWeights, genreKey(genre), positiveWeight));
+            genres.forEach(genre => addLabeledWeight(genreWeights, genre, positiveWeight));
             platforms.forEach(platform => addWeight(platformWeights, platform, positiveWeight));
         }
 
         if (rating > 0 && rating <= 2) {
-            genres.forEach(genre => addWeight(dislikedGenreWeights, genreKey(genre), 4));
+            genres.forEach(genre => addLabeledWeight(dislikedGenreWeights, genre, 4));
         }
     }
 
     for (const item of wishlist) {
-        parseJsonArray(item.game.genres).forEach(genre => addWeight(genreWeights, genreKey(genre), 2));
+        parseJsonArray(item.game.genres).forEach(genre => addLabeledWeight(genreWeights, genre, 2));
         parseJsonArray(item.game.platforms).forEach(platform => addWeight(platformWeights, platform, 1));
     }
 
@@ -254,14 +316,14 @@ async function collectCandidates(
 
     const genres = unique([
         ...profile.favoriteGenres,
-        ...[...profile.genreWeights.keys()],
+        ...[...profile.genreWeights.values()].map(item => item.display),
     ]).slice(0, 14);
 
     for (const genre of genres) {
         candidateQueries.push(prisma.game.findMany({
             where: {
                 id: { notIn: libraryGameIds },
-                genres: { contains: `"${genre}"` },
+                genres: { contains: `"${genre}"`, mode: 'insensitive' },
             },
             orderBy: [{ criticScore: 'desc' }, { title: 'asc' }],
             take: 250,
@@ -284,7 +346,7 @@ async function collectCandidates(
         candidateQueries.push(prisma.game.findMany({
             where: {
                 id: { notIn: libraryGameIds },
-                title: { contains: token },
+                title: { contains: token, mode: 'insensitive' },
             },
             orderBy: { title: 'asc' },
             take: 120,
@@ -341,32 +403,53 @@ function scoreGame(
     const bestLiked = bestSimilarLikedGame(game, profile.likedGames);
     const bestDisliked = bestSimilarLikedGame(game, profile.dislikedGames);
 
-    const contentScore = clamp(genreAffinity * 2.2, 0, 24) +
-        clamp((bestLiked?.similarity || 0) * 16, 0, 11);
+    const similarLikedScore = clamp(
+        (bestLiked?.similarity || 0) * SCORE_WEIGHTS.similarLikedMultiplier,
+        0,
+        SCORE_WEIGHTS.similarLikedCap
+    );
+    const contentScore = clamp(
+        genreAffinity * SCORE_WEIGHTS.genreAffinityMultiplier,
+        0,
+        SCORE_WEIGHTS.contentScoreCap
+    ) + similarLikedScore;
 
-    const wishlistScore = wishlistGameIds.has(game.id) ? 12 : 0;
+    const wishlistScore = wishlistGameIds.has(game.id) ? SCORE_WEIGHTS.wishlistScore : 0;
     const activeGenreOverlap = profile.activeGames.some(activeGame =>
         overlapScore(genreKeys, parseJsonArray(activeGame.genres).map(genreKey)) > 0
-    ) ? 4 : 0;
-    const tasteScore = clamp(wishlistScore + activeGenreOverlap + genreAffinity, 0, 25);
+    ) ? SCORE_WEIGHTS.activeGenreOverlapScore : 0;
+    const tasteScore = clamp(wishlistScore + activeGenreOverlap + genreAffinity, 0, SCORE_WEIGHTS.tasteScoreCap);
 
-    const criticScore = game.criticScore ? clamp((game.criticScore / 100) * 11, 0, 11) : 0;
-    const qualityScore = criticScore + (hasCover(game) ? 2 : 0) + (game.source === 'seed' ? 2 : 0);
+    const criticScore = game.criticScore
+        ? clamp((game.criticScore / 100) * SCORE_WEIGHTS.criticScoreCap, 0, SCORE_WEIGHTS.criticScoreCap)
+        : 0;
+    const qualityScore = criticScore +
+        (hasCover(game) ? SCORE_WEIGHTS.coverQualityBonus : 0) +
+        (game.source === 'seed' ? SCORE_WEIGHTS.seedQualityBonus : 0);
 
     const platform = strongestPlatform(platforms, profile.userPlatforms);
     const platformScore = platforms.length === 0
-        ? 2
+        ? SCORE_WEIGHTS.noPlatformScore
         : profile.userPlatforms.has(platform)
-            ? 10
+            ? SCORE_WEIGHTS.exactPlatformScore
             : platforms.includes(DEFAULT_PLATFORM)
-                ? 7
-                : 3;
+                ? SCORE_WEIGHTS.pcFallbackPlatformScore
+                : SCORE_WEIGHTS.otherPlatformScore;
 
     const dealSignal = priceSignal(prices);
     const priceScore = dealSignal.score;
-    const collaborativeBoost = clamp(collaborativeScore * 8, 0, 12);
+    const collaborativeBoost = clamp(
+        collaborativeScore * SCORE_WEIGHTS.collaborativeMultiplier,
+        0,
+        SCORE_WEIGHTS.collaborativeCap
+    );
 
-    const penalty = clamp(dislikedPenalty * 1.8 + ((bestDisliked?.similarity || 0) * 8), 0, 18);
+    const penalty = clamp(
+        dislikedPenalty * SCORE_WEIGHTS.dislikedGenreMultiplier +
+            ((bestDisliked?.similarity || 0) * SCORE_WEIGHTS.dislikedSimilarityMultiplier),
+        0,
+        SCORE_WEIGHTS.penaltyCap
+    );
     const rawScore = contentScore + tasteScore + qualityScore + platformScore + priceScore + collaborativeBoost - penalty;
 
     const matchedGenres = genres.filter(genre => profile.genreWeights.has(genreKey(genre))).slice(0, 3);
@@ -384,11 +467,33 @@ function scoreGame(
 
     const score = Number(clamp(rawScore, 0, 100).toFixed(2));
 
+    const debugBreakdown = INCLUDE_RECOMMENDATION_DEBUG
+        ? {
+            contentScore: Number(contentScore.toFixed(2)),
+            tasteScore: Number(tasteScore.toFixed(2)),
+            qualityScore: Number(qualityScore.toFixed(2)),
+            platformScore: Number(platformScore.toFixed(2)),
+            priceScore: Number(priceScore.toFixed(2)),
+            collaborativeBoost: Number(collaborativeBoost.toFixed(2)),
+            penalty: Number(penalty.toFixed(2)),
+            rawScore: Number(rawScore.toFixed(2)),
+            genreAffinity: Number(genreAffinity.toFixed(2)),
+            dislikedPenalty: Number(dislikedPenalty.toFixed(2)),
+            bestLikedSimilarity: Number((bestLiked?.similarity || 0).toFixed(3)),
+            bestLikedTitle: bestLiked?.game.title || null,
+            bestLikedSharedTitleTokens: bestLiked?.sharedTitleTokens || 0,
+            bestDislikedSimilarity: Number((bestDisliked?.similarity || 0).toFixed(3)),
+            bestDislikedTitle: bestDisliked?.game.title || null,
+            bestDislikedSharedTitleTokens: bestDisliked?.sharedTitleTokens || 0,
+        }
+        : undefined;
+
     return {
         game,
         score,
         confidence: clamp(Math.round(35 + score * 0.63), 35, 98),
         reasons: unique(reasons).slice(0, 3),
+        ...(debugBreakdown ? { debugBreakdown } : {}),
         debug: {
             primaryGenre: genres[0] || 'Unknown',
             franchise: franchiseKey(game.title),

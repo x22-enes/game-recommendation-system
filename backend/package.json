@@ -10,6 +10,7 @@
     "covers": "ts-node src/backfillCovers.ts",
     "platforms": "ts-node src/backfillPlatforms.ts",
     "critic-scores": "ts-node src/backfillCriticScores.ts",
+    "audit:recommendations": "ts-node src/auditRecommendations.ts",
     "dev": "nodemon src/server.ts",
     "build": "prisma generate && tsc",
     "start": "node dist/src/server.js",
