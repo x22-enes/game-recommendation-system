@@ -115,6 +115,10 @@
     @apply grid grid-cols-3 gap-1.5;
   }
 
+  .mmm-score-wrap {
+    @apply space-y-2;
+  }
+
   .mmm-score-strip-compact {
     @apply max-w-sm;
   }
@@ -133,6 +137,10 @@
 
   .mmm-score-active strong {
     @apply text-cyan-100;
+  }
+
+  .mmm-estimated-badge {
+    @apply inline-flex w-fit rounded-full border border-slate-600/70 bg-slate-900/80 px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-wide text-slate-300;
   }
 
   .sidebar-label {

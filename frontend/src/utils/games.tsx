@@ -83,24 +83,29 @@ export function PriceBadge({ game }: { game: Pick<Game, 'bestPrice'> }) {
 }
 
 const clampScore = (value: number) => Math.max(1, Math.min(99, Math.round(value)));
+const clampQualityScore = (value: number) => Math.max(45, Math.min(88, Math.round(value)));
 
 function includesAny(values: string[], needles: string[]) {
   const normalized = values.map(value => value.toLowerCase());
   return needles.some(needle => normalized.some(value => value.includes(needle)));
 }
 
+const mmmScoreHelp = {
+  Mini: 'Sürətli/yüngül sessiya üçün uyğunluq',
+  Mid: 'Balanslaşdırılmış gündəlik seçim',
+  Max: 'Dərin, premium, yüksək öhdəlik tələb edən oyun',
+};
+
 export function getMmmScores(game: Pick<Game, 'title' | 'genres' | 'platforms' | 'bestPrice' | 'criticScore' | 'ratingSummary'>) {
   const genres = parseGenres(game.genres);
   const platforms = parsePlatforms(game.platforms);
   const price = Number(game.bestPrice?.price);
   const hasPrice = Number.isFinite(price);
-  const criticScore = Number(game.criticScore);
-  const communityScore = Number(game.ratingSummary?.average) * 20;
-  const qualityScore = Number.isFinite(criticScore)
-    ? criticScore
-    : Number.isFinite(communityScore)
-      ? communityScore
-      : 70;
+  const criticScore = typeof game.criticScore === 'number' ? game.criticScore : NaN;
+  const communityScore =
+    typeof game.ratingSummary?.average === 'number' && game.ratingSummary.average > 0
+      ? game.ratingSummary.average * 20
+      : NaN;
 
   const compactGenres = ['puzzle', 'platformer', 'arcade', 'casual', 'hidden object', 'word', 'card'];
   const deepGenres = ['open world', 'rpg', 'survival', 'strategy', 'simulation', 'mmo'];
@@ -110,6 +115,22 @@ export function getMmmScores(game: Pick<Game, 'title' | 'genres' | 'platforms' |
   const isAction = includesAny(genres, actionGenres);
   const hasPc = platforms.includes('PC');
   const hasManyPlatforms = platforms.length >= 3;
+  const hasQualityData = Number.isFinite(criticScore) || Number.isFinite(communityScore);
+  const estimatedQualityScore = clampQualityScore(
+    62 +
+    (isDeep ? 10 : 0) +
+    (isAction ? 4 : 0) +
+    (isCompact ? 3 : 0) +
+    (hasManyPlatforms ? 5 : 0) +
+    (hasPc ? 2 : 0) +
+    (hasPrice && price >= 30 ? 5 : 0) +
+    (hasPrice && price <= 5 ? 2 : 0)
+  );
+  const qualityScore = Number.isFinite(criticScore)
+    ? criticScore
+    : Number.isFinite(communityScore)
+      ? communityScore
+      : estimatedQualityScore;
 
   const mini = clampScore(
     48 +
@@ -141,12 +162,12 @@ export function getMmmScores(game: Pick<Game, 'title' | 'genres' | 'platforms' |
   );
 
   const best = [
-    { key: 'Mini', score: mini, label: 'Light, quick, low-spec fit' },
-    { key: 'Mid', score: mid, label: 'Balanced everyday pick' },
-    { key: 'Max', score: max, label: 'Deep, premium, high-commitment fit' },
+    { key: 'Mini', score: mini, label: mmmScoreHelp.Mini },
+    { key: 'Mid', score: mid, label: mmmScoreHelp.Mid },
+    { key: 'Max', score: max, label: mmmScoreHelp.Max },
   ].sort((a, b) => b.score - a.score)[0];
 
-  return { mini, mid, max, best };
+  return { mini, mid, max, best, hasQualityData, qualityScore };
 }
 
 export function MmmScoreStrip({
@@ -158,19 +179,31 @@ export function MmmScoreStrip({
 }) {
   const scores = getMmmScores(game);
   const items = [
-    { label: 'Mini', value: scores.mini },
-    { label: 'Mid', value: scores.mid },
-    { label: 'Max', value: scores.max },
+    { label: 'Mini', value: scores.mini, help: mmmScoreHelp.Mini },
+    { label: 'Mid', value: scores.mid, help: mmmScoreHelp.Mid },
+    { label: 'Max', value: scores.max, help: mmmScoreHelp.Max },
   ];
 
   return (
-    <div className={compact ? 'mmm-score-strip mmm-score-strip-compact' : 'mmm-score-strip'}>
-      {items.map(item => (
-        <span key={item.label} className={item.label === scores.best.key ? 'mmm-score mmm-score-active' : 'mmm-score'}>
-          <span>{item.label}</span>
-          <strong>{item.value}</strong>
+    <div className="mmm-score-wrap">
+      <div className={compact ? 'mmm-score-strip mmm-score-strip-compact' : 'mmm-score-strip'}>
+        {items.map(item => (
+          <span
+            key={item.label}
+            className={item.label === scores.best.key ? 'mmm-score mmm-score-active' : 'mmm-score'}
+            title={item.help}
+            aria-label={`${item.label}: ${item.value}. ${item.help}`}
+          >
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
+          </span>
+        ))}
+      </div>
+      {!scores.hasQualityData && (
+        <span className="mmm-estimated-badge" title="Critic və community reytinqi yoxdur, bu bal janr/platform/qiymət siqnallarından təxmini hesablanıb.">
+          Reytinq məlumatı yoxdur
         </span>
-      ))}
+      )}
     </div>
   );
 }
