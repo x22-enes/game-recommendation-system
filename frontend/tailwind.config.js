@@ -9,6 +9,7 @@ module.exports = {
       animation: {
         'fade-in': 'fadeIn 0.45s ease-out forwards',
         'fade-in-up': 'fadeInUp 0.5s ease-out forwards',
+        'fade-out': 'fadeOut 0.32s ease-in forwards',
         'bar-fill': 'barFill 0.9s ease-out forwards',
         'shimmer': 'shimmer 2s ease-in-out infinite',
         'pulse-soft': 'pulseSoft 2.5s ease-in-out infinite',
@@ -21,6 +22,10 @@ module.exports = {
         fadeInUp: {
           '0%': { opacity: '0', transform: 'translateY(12px)' },
           '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        fadeOut: {
+          '0%': { opacity: '1', transform: 'translateY(0)' },
+          '100%': { opacity: '0', transform: 'translateY(-8px)' },
         },
         barFill: {
           '0%': { width: '0%' },

@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
 import { CoverArt, gameBlurb, MmmScoreStrip, parseGenres, parsePlatforms, PlatformBadges } from '../utils/games';
+import { useToast } from '../context/ToastContext';
 
 export default function Wishlist() {
     const [wishlist, setWishlist] = useState<any[]>([]);
+    const { showToast } = useToast();
 
     const fetchWishlist = () => {
         api.get('/wishlist').then(res => setWishlist(res.data)).catch(console.error);
@@ -16,9 +18,9 @@ export default function Wishlist() {
         try {
             await api.post(`/library/${gameId}`);
             fetchWishlist();
-            alert('Moved to library.');
+            showToast('Moved to library.', 'success');
         } catch (e: any) {
-            alert(e.response?.data?.error || 'Error moving to library');
+            showToast(e.response?.data?.error || 'Error moving to library', 'error');
         }
     };
 

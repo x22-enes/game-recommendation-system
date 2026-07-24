@@ -2,6 +2,7 @@ import { useEffect, useState, type CSSProperties } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import api from '../api';
 import { CoverArt, gameBlurb, MmmScoreStrip, parseGenres, parsePlatforms, PlatformBadges, PriceBadge } from '../utils/games';
+import { useToast } from '../context/ToastContext';
 
 function UserAvatar({ user, size = 'md' }: { user: any; size?: 'sm' | 'md' }) {
     const [failed, setFailed] = useState(false);
@@ -110,6 +111,7 @@ function RelatedGameCard({ game }: { game: any }) {
 export default function GameDetail() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { showToast } = useToast();
     const [game, setGame] = useState<any>(null);
     const [prices, setPrices] = useState<any[]>([]);
     const [comments, setComments] = useState<any[]>([]);
@@ -139,19 +141,19 @@ export default function GameDetail() {
     const addToWishlist = async () => {
         try {
             await api.post(`/wishlist/${id}`);
-            alert('Added to wishlist.');
+            showToast('Added to wishlist.', 'success');
         } catch (e: any) {
-            alert(e.response?.data?.error || 'Failed to add to wishlist');
+            showToast(e.response?.data?.error || 'Failed to add to wishlist', 'error');
         }
     };
 
     const addToLibrary = async () => {
         try {
             await api.post(`/library/${id}`);
-            alert('Added to library.');
+            showToast('Added to library.', 'success');
             navigate('/library');
         } catch (e: any) {
-            alert(e.response?.data?.error || 'Failed to add to library');
+            showToast(e.response?.data?.error || 'Failed to add to library', 'error');
         }
     };
 
