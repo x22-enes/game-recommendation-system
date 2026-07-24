@@ -270,6 +270,76 @@
     @apply -mx-1 flex max-w-full items-center gap-1 overflow-x-auto px-1 pb-1 sm:gap-1.5 md:overflow-visible md:pb-0;
   }
 
+  .notification-root {
+    @apply relative;
+  }
+
+  .notification-trigger {
+    @apply relative flex h-10 w-10 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-slate-300 transition-all duration-200;
+    @apply hover:border-cyan-400/30 hover:bg-cyan-400/10 hover:text-cyan-200 focus:outline-none focus:ring-2 focus:ring-cyan-400/30;
+  }
+
+  .notification-badge {
+    @apply absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full border border-slate-950 bg-red-500 px-1 text-[0.65rem] font-black text-white shadow-card;
+  }
+
+  .notification-panel {
+    @apply fixed right-4 top-20 z-50 w-[min(26rem,calc(100vw-2rem))] overflow-hidden rounded-xl border border-white/10 bg-slate-950/95 shadow-card backdrop-blur-xl sm:right-6;
+  }
+
+  .notification-panel-header {
+    @apply flex items-center justify-between gap-3 border-b border-white/[0.08] p-4;
+  }
+
+  .notification-read-all {
+    @apply inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-2 text-xs font-bold text-slate-300 transition-colors duration-200;
+    @apply hover:border-white/20 hover:bg-white/[0.08] hover:text-white disabled:cursor-not-allowed disabled:opacity-40;
+  }
+
+  .notification-list {
+    @apply max-h-[28rem] overflow-y-auto p-2;
+  }
+
+  .notification-item {
+    @apply flex w-full gap-3 rounded-lg p-3 text-left transition-colors duration-200 hover:bg-white/[0.06];
+  }
+
+  .notification-item-unread {
+    @apply bg-cyan-400/[0.07];
+  }
+
+  .notification-type {
+    @apply mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-slate-400;
+  }
+
+  .notification-type-price_drop {
+    @apply border-emerald-400/25 bg-emerald-400/10 text-emerald-300;
+  }
+
+  .notification-type-comment_reply {
+    @apply border-cyan-400/25 bg-cyan-400/10 text-cyan-300;
+  }
+
+  .notification-type-comment_like {
+    @apply border-red-400/25 bg-red-400/10 text-red-300;
+  }
+
+  .notification-title {
+    @apply block truncate text-sm font-black text-white;
+  }
+
+  .notification-body {
+    @apply mt-1 line-clamp-2 block text-xs leading-5 text-slate-400;
+  }
+
+  .notification-time {
+    @apply mt-1 block text-[0.68rem] font-bold uppercase tracking-wide text-slate-600;
+  }
+
+  .notification-empty {
+    @apply px-4 py-10 text-center text-sm font-semibold text-slate-500;
+  }
+
   .media-shell {
     @apply overflow-hidden rounded-xl border border-white/[0.08] bg-slate-950 shadow-card;
   }

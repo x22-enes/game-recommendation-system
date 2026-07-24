@@ -1,5 +1,6 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { clearAuthToken, useAuthToken } from '../auth';
+import NotificationBell from './NotificationBell';
 
 export default function Navbar() {
     const navigate = useNavigate();
@@ -38,6 +39,7 @@ export default function Navbar() {
                             <NavLink to="/wishlist" className={navClass}>Wishlist</NavLink>
                             <NavLink to="/recommendations" className={navClass}>For You</NavLink>
                             <NavLink to="/preferences" className={navClass}>Preferences</NavLink>
+                            <NotificationBell />
                             <NavLink to="/profile" className={navClass}>Profile</NavLink>
                             <button onClick={() => { clearAuthToken(); navigate('/login'); }} className="btn-danger ml-1">
                                 Logout

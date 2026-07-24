@@ -21,6 +21,7 @@ model User {
   comments       GameComment[]
   commentLikes   CommentLike[]
   emailVerificationCodes EmailVerificationCode[]
+  notifications Notification[]
 }
 
 model EmailVerificationCode {
@@ -88,14 +89,30 @@ model StorePrice {
   gameId    String
   storeName String
   price     Float
+  previousPrice Float?
   url       String
   source    String // e.g., 'cheapshark'
+  lastCheckedAt DateTime @default(now()) @updatedAt
   game      Game   @relation(fields: [gameId], references: [id])
 
   @@index([gameId])
   @@index([gameId, price])
   @@index([source])
   @@index([storeName])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, read, createdAt])
 }
 
 model GameComment {

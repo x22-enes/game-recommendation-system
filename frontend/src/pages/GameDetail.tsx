@@ -488,7 +488,7 @@ export default function GameDetail() {
                                 </div>
                             )}
                             {comments.map(comment => (
-                                <article key={comment.id} className="comment-thread">
+                                <article key={comment.id} id={`comment-${comment.id}`} className="comment-thread scroll-mt-24">
                                     <div className="flex gap-3 sm:gap-4">
                                         <Link to={`/users/${comment.userId}`} className="shrink-0">
                                             <UserAvatar user={comment} />
@@ -542,7 +542,7 @@ export default function GameDetail() {
                                             {comment.replies?.length > 0 && (
                                                 <div className="mt-4 space-y-3 border-l-2 border-cyan-400/20 pl-4">
                                                     {comment.replies.map((reply: any) => (
-                                                        <div key={reply.id} className="comment-reply">
+                                                        <div key={reply.id} id={`comment-${reply.id}`} className="comment-reply scroll-mt-24">
                                                             <div className="flex gap-3">
                                                                 <Link to={`/users/${reply.userId}`} className="shrink-0">
                                                                     <UserAvatar user={reply} size="sm" />

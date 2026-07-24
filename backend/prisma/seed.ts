@@ -44,6 +44,7 @@ const massiveLibrary = [
 
 async function main() {
     console.log('Wiping database...');
+    await prisma.notification.deleteMany({});
     await prisma.storePrice.deleteMany({});
     await prisma.wishlistItem.deleteMany({});
     await prisma.userGame.deleteMany({});

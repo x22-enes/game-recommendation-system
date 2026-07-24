@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { inferGenresForTitle } from './genreProvider';
+import { updateStorePriceAndNotify } from './storePriceService';
 
 const prisma = new PrismaClient();
 
@@ -235,33 +236,28 @@ async function importGames(imported: Map<string, ImportedGame>) {
 }
 
 async function importPrices(imported: Map<string, ImportedGame>) {
-    await prisma.storePrice.deleteMany({ where: { source: CATALOG_SOURCE } });
-
     const games = await prisma.game.findMany({ select: { id: true, title: true } });
-    const gameIdByKey = new Map(games.map(game => [catalogTitleKey(game.title), game.id]));
-    const prices: Prisma.StorePriceCreateManyInput[] = [];
+    const gameByKey = new Map(games.map(game => [catalogTitleKey(game.title), game]));
+    let updated = 0;
 
     for (const [key, game] of imported) {
-        const gameId = gameIdByKey.get(key);
-        if (!gameId) continue;
+        const localGame = gameByKey.get(key);
+        if (!localGame) continue;
 
         for (const price of game.prices.values()) {
-            prices.push({
-                gameId,
+            const result = await updateStorePriceAndNotify(prisma, {
+                gameId: localGame.id,
+                gameTitle: localGame.title,
                 storeName: price.storeName,
                 price: price.price,
                 url: price.url,
                 source: CATALOG_SOURCE,
             });
+            if (result.created || result.updated) updated++;
         }
     }
 
-    for (const batch of chunk(prices, CHUNK_SIZE)) {
-        await prisma.storePrice.createMany({ data: batch });
-        console.log(`Inserted ${Math.min(prices.indexOf(batch[0]) + batch.length, prices.length)} / ${prices.length} store prices`);
-    }
-
-    console.log(`Store prices inserted: ${prices.length}`);
+    console.log(`Store prices updated: ${updated}`);
 }
 
 async function main() {

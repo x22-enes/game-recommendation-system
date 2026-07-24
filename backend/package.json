@@ -11,6 +11,7 @@
     "platforms": "ts-node src/backfillPlatforms.ts",
     "critic-scores": "ts-node src/backfillCriticScores.ts",
     "inspect:game": "ts-node src/inspectGame.ts",
+    "refresh:prices": "ts-node src/refreshPricesAndNotify.ts",
     "audit:recommendations": "ts-node src/auditRecommendations.ts",
     "dev": "nodemon src/server.ts",
     "build": "prisma generate && tsc",

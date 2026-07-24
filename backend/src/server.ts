@@ -15,6 +15,7 @@ import { buildRecommendations } from './recommendationEngine';
 import { inferGenresForTitle } from './genreProvider';
 import { fetchSteamDetails, steamAppIdFromUrl } from './steamProvider';
 import { fetchLizardByteGameDetails, lizardByteIdFromSource, lizardByteMetadataForGame } from './lizardByteProvider';
+import { createNotification } from './notificationService';
 
 dotenv.config();
 const app = express();
@@ -616,6 +617,15 @@ const formatComment = (comment: any, viewerId?: string) => ({
     replies: (comment.replies || []).map((reply: any) => formatComment(reply, viewerId)),
 });
 
+const getActorUsername = async (userId: string) => {
+    const user = await prisma.user.findFirst({
+        where: { id: userId },
+        select: { username: true },
+    });
+
+    return user?.username || 'Someone';
+};
+
 const getOptionalUserId = (req: any) => {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) return undefined;
@@ -1019,11 +1029,12 @@ app.post('/api/games/:id/comments', writeLimiter, authenticate, async (req: any,
         if (!game) return res.status(404).json({ error: 'Game not found' });
 
         const parentId = req.body.parentId ? String(req.body.parentId) : null;
+        let parentComment: any = null;
         if (parentId) {
-            const parent = await prisma.gameComment.findFirst({
+            parentComment = await prisma.gameComment.findFirst({
                 where: { id: parentId, gameId: req.params.id, parentId: null },
             });
-            if (!parent) return res.status(404).json({ error: 'Parent comment not found' });
+            if (!parentComment) return res.status(404).json({ error: 'Parent comment not found' });
         }
 
         const comment = await prisma.gameComment.create({
@@ -1039,6 +1050,17 @@ app.post('/api/games/:id/comments', writeLimiter, authenticate, async (req: any,
                 replies: true,
             },
         });
+
+        if (parentComment && parentComment.userId !== req.user.userId) {
+            const actorUsername = await getActorUsername(req.user.userId);
+            await createNotification(prisma, {
+                userId: parentComment.userId,
+                type: 'comment_reply',
+                title: `${actorUsername} replied to your comment`,
+                body: `New reply on ${game.title}`,
+                link: `/games/${game.id}#comment-${comment.id}`,
+            });
+        }
 
         res.json(formatComment(comment, req.user.userId));
     } catch (error) {
@@ -1062,12 +1084,84 @@ app.post('/api/comments/:id/like', writeLimiter, authenticate, async (req: any, 
             await prisma.commentLike.create({
                 data: { userId: req.user.userId, commentId: req.params.id },
             });
+
+            if (comment.userId !== req.user.userId) {
+                const actorUsername = await getActorUsername(req.user.userId);
+                const title = `${actorUsername} liked your comment`;
+                const link = `/games/${comment.gameId}#comment-${comment.id}`;
+                const existingNotification = await prisma.notification.findFirst({
+                    where: {
+                        userId: comment.userId,
+                        type: 'comment_like',
+                        title,
+                        link,
+                    },
+                    select: { id: true },
+                });
+
+                if (!existingNotification) await createNotification(prisma, {
+                    userId: comment.userId,
+                    type: 'comment_like',
+                    title,
+                    body: 'Someone reacted to your community post.',
+                    link,
+                });
+            }
         }
 
         const likeCount = await prisma.commentLike.count({ where: { commentId: req.params.id } });
         res.json({ likedByMe: !existing, likeCount });
     } catch {
         res.status(500).json({ error: 'Failed to update like' });
+    }
+});
+
+app.get('/api/notifications', authenticate, async (req: any, res: any) => {
+    try {
+        const notifications = await prisma.notification.findMany({
+            where: { userId: req.user.userId },
+            orderBy: { createdAt: 'desc' },
+            take: 30,
+        });
+        res.json(notifications);
+    } catch {
+        res.status(500).json({ error: 'Failed to fetch notifications' });
+    }
+});
+
+app.get('/api/notifications/unread-count', authenticate, async (req: any, res: any) => {
+    try {
+        const count = await prisma.notification.count({
+            where: { userId: req.user.userId, read: false },
+        });
+        res.json({ count });
+    } catch {
+        res.status(500).json({ error: 'Failed to fetch notification count' });
+    }
+});
+
+app.patch('/api/notifications/:id/read', writeLimiter, authenticate, async (req: any, res: any) => {
+    try {
+        const updated = await prisma.notification.updateMany({
+            where: { id: req.params.id, userId: req.user.userId },
+            data: { read: true },
+        });
+        if (updated.count === 0) return res.status(404).json({ error: 'Notification not found' });
+        res.json({ success: true });
+    } catch {
+        res.status(500).json({ error: 'Failed to update notification' });
+    }
+});
+
+app.patch('/api/notifications/read-all', writeLimiter, authenticate, async (req: any, res: any) => {
+    try {
+        await prisma.notification.updateMany({
+            where: { userId: req.user.userId, read: false },
+            data: { read: true },
+        });
+        res.json({ success: true });
+    } catch {
+        res.status(500).json({ error: 'Failed to update notifications' });
     }
 });
 

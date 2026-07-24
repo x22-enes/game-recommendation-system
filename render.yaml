@@ -16,3 +16,18 @@ services:
         value: "false"
       - key: VITE_API_URL
         value: ""
+  - type: cron
+    name: game-recommendation-price-refresh
+    runtime: node
+    schedule: "0 6 * * *"
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: cd backend && npx prisma db push && node dist/src/refreshPricesAndNotify.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: PRICE_REFRESH_LIMIT
+        value: "80"
+      - key: USE_LIVE_APIS
+        value: "true"
