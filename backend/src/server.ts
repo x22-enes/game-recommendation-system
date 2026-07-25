@@ -69,7 +69,7 @@ app.use(cors({
         }
         : isProduction ? false : true,
 }));
-app.use(express.json({ limit: '128kb', strict: true }));
+app.use(express.json({ limit: '256kb', strict: true }));
 
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
@@ -1326,14 +1326,15 @@ app.patch('/api/profile', writeLimiter, authenticate, async (req: any, res: any)
     try {
         const avatarUrl = String(req.body.avatarUrl || '').trim();
         const steamProfileUrl = String(req.body.steamProfileUrl || '').trim();
+        const MAX_AVATAR_DATA_URL_LENGTH = 180_000;
+        const MAX_STEAM_PROFILE_URL_LENGTH = 500;
 
         const isAvatar = (value: string) => !value || /^data:image\/(png|jpe?g|webp);base64,/i.test(value) || /^https?:\/\/\S+\.\S+/.test(value);
         const isUrl = (value: string) => !value || /^https?:\/\/\S+\.\S+/.test(value);
         if (!isAvatar(avatarUrl)) return res.status(400).json({ error: 'Avatar must be an image file' });
         if (!isUrl(steamProfileUrl)) return res.status(400).json({ error: 'Steam profile must be a valid URL' });
-        if (avatarUrl.length > 100_000 || steamProfileUrl.length > 500) {
-            return res.status(400).json({ error: 'URL is too long' });
-        }
+        if (avatarUrl.length > MAX_AVATAR_DATA_URL_LENGTH) return res.status(400).json({ error: 'Avatar image is too large' });
+        if (steamProfileUrl.length > MAX_STEAM_PROFILE_URL_LENGTH) return res.status(400).json({ error: 'Steam profile URL is too long' });
 
         const user = await prisma.user.update({
             where: { id: req.user.userId },
