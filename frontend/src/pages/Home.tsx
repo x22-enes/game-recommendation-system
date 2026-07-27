@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../api';
 import { getAuthToken } from '../auth';
 import { CoverArt, Game, gameBlurb, MmmScoreStrip, parseGenres, parsePlatforms, PlatformBadges, PriceBadge } from '../utils/games';
+import { useToast } from '../context/ToastContext';
 
 const DEFAULT_GENRE_OPTIONS = [
     'All',
@@ -55,17 +56,36 @@ const browseCacheKey = (search: string, genre: string, platform: string, seed: s
 
 type SortMode = 'Popularity' | 'Price' | 'Name';
 
-function CompactSearchResult({ game }: { game: Game }) {
+function CompactSearchResult({
+    game,
+    onAddToLibrary,
+    isAdding,
+    isInLibrary,
+}: {
+    game: Game;
+    onAddToLibrary: (game: Game) => void;
+    isAdding: boolean;
+    isInLibrary: boolean;
+}) {
     const platforms = parsePlatforms(game.platforms);
     const genres = parseGenres(game.genres);
-    const description = gameBlurb(game, 'Open the game profile to view details, store pricing, platforms, and community activity.');
+    const description = gameBlurb(game, 'Add this game to your library from the search results.');
 
     return (
-        <Link
-            to={`/games/${game.id}`}
-            className="group grid grid-cols-[8.5rem_1fr] overflow-hidden rounded-xl border border-white/[0.08] bg-slate-900/60 transition-all duration-300 hover:-translate-y-0.5 hover:border-cyan-400/25 hover:shadow-card-hover"
+        <article
+            className="group grid grid-cols-1 overflow-hidden rounded-xl border border-white/[0.08] bg-slate-900/60 transition-all duration-300 hover:-translate-y-0.5 hover:border-cyan-400/25 hover:shadow-card-hover sm:grid-cols-[8.5rem_1fr]"
         >
-            <CoverArt game={game} className="card-cover h-full" />
+            <div className="card-image-wrap min-h-44 sm:min-h-full">
+                <CoverArt game={game} className="card-cover h-full" />
+                <button
+                    type="button"
+                    className={isInLibrary ? 'btn-secondary absolute bottom-2 left-2 right-2 z-20 px-2 py-2 text-xs' : 'btn-primary absolute bottom-2 left-2 right-2 z-20 px-2 py-2 text-xs'}
+                    onClick={() => onAddToLibrary(game)}
+                    disabled={isAdding || isInLibrary}
+                >
+                    {isAdding ? 'Adding...' : isInLibrary ? 'In Library' : '+ Library'}
+                </button>
+            </div>
             <div className="flex min-w-0 flex-col justify-center gap-2 px-4 py-3">
                 <h3 className="truncate text-base font-bold text-white group-hover:text-cyan-200">{game.title}</h3>
                 <p className="line-clamp-1 text-xs text-slate-500">{genres.join(', ') || 'Adventure'}</p>
@@ -75,20 +95,39 @@ function CompactSearchResult({ game }: { game: Game }) {
                     <PlatformBadges platforms={platforms} limit={3} />
                     <PriceBadge game={game} />
                 </div>
+                <button
+                    type="button"
+                    className={isInLibrary ? 'btn-secondary w-full py-2 text-xs' : 'btn-primary w-full py-2 text-xs'}
+                    onClick={() => onAddToLibrary(game)}
+                    disabled={isAdding || isInLibrary}
+                >
+                    {isAdding ? 'Adding...' : isInLibrary ? 'In Library' : 'Add to Library'}
+                </button>
             </div>
-        </Link>
+        </article>
     );
 }
 
-function GameMarketCard({ game, index = 0 }: { game: Game; index?: number }) {
+function GameMarketCard({
+    game,
+    index = 0,
+    onAddToLibrary,
+    isAdding,
+    isInLibrary,
+}: {
+    game: Game;
+    index?: number;
+    onAddToLibrary: (game: Game) => void;
+    isAdding: boolean;
+    isInLibrary: boolean;
+}) {
     const genres = parseGenres(game.genres);
     const platforms = parsePlatforms(game.platforms);
     const stagger = Math.min(index % 6, 5);
-    const description = gameBlurb(game, 'Explore details, platform availability, price signals, and recommendation context for this game.');
+    const description = gameBlurb(game, 'Add this game to your library from the catalog results.');
 
     return (
-        <Link
-            to={`/games/${game.id}`}
+        <article
             className={`market-card group flex h-full flex-col animate-fade-in-up stagger-${stagger + 1}`}
             style={{ opacity: 0 }}
         >
@@ -114,12 +153,21 @@ function GameMarketCard({ game, index = 0 }: { game: Game; index?: number }) {
                 <div className="mt-3">
                     <MmmScoreStrip game={game} />
                 </div>
-                <div className="mt-auto flex items-center justify-between border-t border-white/[0.06] pt-3">
-                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">View details</span>
-                    <span className="text-sm text-cyan-400 opacity-0 transition-all duration-200 group-hover:translate-x-0.5 group-hover:opacity-100" aria-hidden>→</span>
+                <div className="mt-auto flex items-center justify-between gap-3 border-t border-white/[0.06] pt-3">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-slate-600">
+                        {isInLibrary ? 'Already saved' : 'Save from results'}
+                    </span>
+                    <button
+                        type="button"
+                        className={isInLibrary ? 'btn-secondary px-3 py-2 text-xs' : 'btn-primary px-3 py-2 text-xs'}
+                        onClick={() => onAddToLibrary(game)}
+                        disabled={isAdding || isInLibrary}
+                    >
+                        {isAdding ? 'Adding...' : isInLibrary ? 'In Library' : 'Add'}
+                    </button>
                 </div>
             </div>
-        </Link>
+        </article>
     );
 }
 
@@ -232,6 +280,8 @@ function GenrePanel({
 
 export default function Home() {
     const [searchParams, setSearchParams] = useSearchParams();
+    const navigate = useNavigate();
+    const { showToast } = useToast();
     const [games, setGames] = useState<Game[]>([]);
     const [search, setSearch] = useState(() => searchParams.get('search') || '');
     const [genre, setGenre] = useState(() => searchParams.get('genre') || 'All');
@@ -243,6 +293,8 @@ export default function Home() {
     const [genreOptions, setGenreOptions] = useState(DEFAULT_GENRE_OPTIONS);
     const [browseSeed, setBrowseSeed] = useState(getBrowseSeed);
     const [sortMode, setSortMode] = useState<SortMode>('Popularity');
+    const [libraryGameIds, setLibraryGameIds] = useState<Set<string>>(() => new Set());
+    const [addingGameId, setAddingGameId] = useState<string | null>(null);
 
     useEffect(() => {
         const nextSearch = searchParams.get('search') || '';
@@ -298,6 +350,22 @@ export default function Home() {
                 setGenreOptions(['All', ...genres.filter(item => item !== 'All')]);
             })
             .catch(() => setGenreOptions(DEFAULT_GENRE_OPTIONS));
+    }, []);
+
+    useEffect(() => {
+        if (!getAuthToken()) {
+            setLibraryGameIds(new Set());
+            return;
+        }
+
+        api.get('/library')
+            .then(res => {
+                const gameIds = Array.isArray(res.data)
+                    ? res.data.map((item: any) => item.gameId).filter(Boolean)
+                    : [];
+                setLibraryGameIds(new Set(gameIds));
+            })
+            .catch(() => setLibraryGameIds(new Set()));
     }, []);
 
     useEffect(() => {
@@ -383,6 +451,30 @@ export default function Home() {
         setShuffleKey(current => current + 1);
     };
 
+    const addToLibrary = async (game: Game) => {
+        if (!getAuthToken()) {
+            showToast('Please login before adding games to your library.', 'error');
+            navigate('/login');
+            return;
+        }
+
+        try {
+            setAddingGameId(game.id);
+            await api.post(`/library/${game.id}`);
+            setLibraryGameIds(current => new Set([...current, game.id]));
+            showToast(`${game.title} added to library.`, 'success');
+        } catch (e: any) {
+            if (e.response?.status === 401) {
+                showToast('Session expired. Please login again.', 'error');
+                navigate('/login');
+                return;
+            }
+            showToast(e.response?.data?.error || 'Failed to add to library.', 'error');
+        } finally {
+            setAddingGameId(null);
+        }
+    };
+
     return (
         <div className="page-enter">
             <section className="search-panel mb-6">
@@ -416,7 +508,7 @@ export default function Home() {
                     </div>
                     <div className="hidden border-l border-white/[0.06] bg-slate-950/30 p-5 lg:block">
                         {featuredGame ? (
-                            <Link to={`/games/${featuredGame.id}`} className="group block h-full">
+                            <article className="group block h-full">
                                 <div className="card-image-wrap overflow-hidden rounded-xl border border-white/[0.08]">
                                     <CoverArt game={featuredGame} className="card-cover transition-transform duration-500 group-hover:scale-105" />
                                     <div className="featured-overlay" />
@@ -426,9 +518,16 @@ export default function Home() {
                                         <p className="text-[0.65rem] font-bold uppercase tracking-wide text-cyan-400">Featured</p>
                                         <h2 className="mt-0.5 truncate text-lg font-black text-white group-hover:text-cyan-200">{featuredGame.title}</h2>
                                     </div>
-                                    <span className="score-pill shrink-0">View</span>
+                                    <button
+                                        type="button"
+                                        className={libraryGameIds.has(featuredGame.id) ? 'btn-secondary shrink-0 px-3 py-2 text-xs' : 'btn-primary shrink-0 px-3 py-2 text-xs'}
+                                        onClick={() => addToLibrary(featuredGame)}
+                                        disabled={addingGameId === featuredGame.id || libraryGameIds.has(featuredGame.id)}
+                                    >
+                                        {addingGameId === featuredGame.id ? 'Adding...' : libraryGameIds.has(featuredGame.id) ? 'In Library' : 'Add'}
+                                    </button>
                                 </div>
-                            </Link>
+                            </article>
                         ) : (
                             <div className="skeleton h-full min-h-52 rounded-xl" />
                         )}
@@ -437,7 +536,7 @@ export default function Home() {
             </section>
 
             <div className="grid gap-6 lg:grid-cols-[17rem_1fr]">
-                <aside className="space-y-4">
+                <aside className="order-2 space-y-4 lg:order-1">
                     <GenrePanel value={genre} onChange={handleGenreChange} options={genreOptions} />
 
                     <div className="surface rounded-xl p-4">
@@ -470,7 +569,7 @@ export default function Home() {
                     )}
                 </aside>
 
-                <main>
+                <main className="order-1 min-w-0 lg:order-2">
                     <div className="mb-5 flex flex-col gap-3 border-b border-white/[0.06] pb-4 sm:flex-row sm:items-end sm:justify-between">
                         <div>
                             <p className="eyebrow">{search.trim() ? 'Search' : 'Browse'}</p>
@@ -520,13 +619,30 @@ export default function Home() {
                                 <section className="mb-6">
                                     <p className="sidebar-label mb-3">Quick matches</p>
                                     <div className="grid gap-3 xl:grid-cols-2">
-                                        {compactResults.map(game => <CompactSearchResult key={game.id} game={game} />)}
+                                        {compactResults.map(game => (
+                                            <CompactSearchResult
+                                                key={game.id}
+                                                game={game}
+                                                onAddToLibrary={addToLibrary}
+                                                isAdding={addingGameId === game.id}
+                                                isInLibrary={libraryGameIds.has(game.id)}
+                                            />
+                                        ))}
                                     </div>
                                 </section>
                             )}
 
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-                                {filteredGames.map((g, i) => <GameMarketCard key={g.id} game={g} index={i} />)}
+                                {filteredGames.map((g, i) => (
+                                    <GameMarketCard
+                                        key={g.id}
+                                        game={g}
+                                        index={i}
+                                        onAddToLibrary={addToLibrary}
+                                        isAdding={addingGameId === g.id}
+                                        isInLibrary={libraryGameIds.has(g.id)}
+                                    />
+                                ))}
                             </div>
                         </>
                     )}
