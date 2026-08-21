@@ -7,7 +7,8 @@ declare global {
   }
 }
 
-export const gaMeasurementId = import.meta.env.VITE_GA_MEASUREMENT_ID?.trim();
+export const gaMeasurementId =
+  import.meta.env.VITE_GA_MEASUREMENT_ID?.trim() || 'G-FSR44ZVMFX';
 
 export function initializeAnalytics() {
   if (!gaMeasurementId || typeof window === 'undefined') {
