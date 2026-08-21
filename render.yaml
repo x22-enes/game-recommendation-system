@@ -16,6 +16,8 @@ services:
         value: "false"
       - key: VITE_API_URL
         value: ""
+      - key: VITE_GA_MEASUREMENT_ID
+        value: "G-FSR44ZVMFX"
   - type: cron
     name: game-recommendation-price-refresh
     runtime: node
